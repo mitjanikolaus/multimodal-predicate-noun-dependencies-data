@@ -21,7 +21,7 @@ def filter_scene_graphs():
     #         print(desc.phrase)
 
     rels_men = []
-    rels_women = []
+    rels_children = []
 
     print("Loading scene graphs..")
     scene_graphs = vg.get_scene_graphs(start_index=0, end_index=1000, data_dir=DATA_DIR, image_data_dir=IMAGE_DATA_DIR)
@@ -39,15 +39,15 @@ def filter_scene_graphs():
             if NOUN_MAN in subject_synsets and REL_WEAR in relationship_synsets:
                 rels_men.append(relationship)
             if NOUN_CHILD in subject_synsets and REL_WEAR in relationship_synsets:
-                rels_women.append(relationship)
+                rels_children.append(relationship)
 
-    print(rels_women)
+    print(rels_children)
     print(rels_men)
     for rel_man in rels_men:
-        for rel_woman in rels_women:
-            if rel_man.object.names[0] == rel_woman.object.names[0]: #TODO only first names?
+        for rel_child in rels_children:
+            if rel_man.object.names[0] == rel_child.object.names[0]: #TODO only first names?
                 print(rel_man)
-                print(rel_woman)
+                print(rel_child)
 
     #TODO: make sure distractor is not in same image!
 
