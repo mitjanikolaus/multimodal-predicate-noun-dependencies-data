@@ -10,8 +10,8 @@ from matplotlib.patches import Rectangle
 import io
 import requests
 
-DATA_DIR = "../visual_genome_python_driver/visual_genome/data/"
-IMAGE_DATA_DIR = "../visual_genome_python_driver/visual_genome/data/by-id/"
+DATA_DIR = os.path.expanduser("~/data/visual_genome/")
+IMAGE_DATA_DIR = os.path.expanduser("~/data/visual_genome/by-id/")
 
 SPLIT_TEST = "data/visual_genome_splits/test.txt"
 
