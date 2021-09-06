@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import visual_genome.local as vg_local
 import pandas as pd
@@ -74,23 +75,24 @@ def show_image_pair(image_1, image_2, regions_and_attributes_1, regions_and_attr
 
     plt.imshow(image)
     ax = plt.gca()
-    for region, attribute in regions_and_attributes_1:
+    colors = ["green", "red"]
+    for (region, attribute), color in zip(regions_and_attributes_1, colors):
         ax.add_patch(Rectangle((region.x, region.y),
                                region.width,
                                region.height,
                                fill=False,
-                               edgecolor='green',
+                               edgecolor=color,
                                linewidth=3))
         ax.text(region.x, region.y, region.names[0] + f" ({attribute})", style='italic',
                 bbox={'facecolor': 'white', 'alpha': 0.7, 'pad': 10})
 
     x_offset = img_1_data.width
-    for region, attribute in regions_and_attributes_2:
+    for (region, attribute), color in zip(regions_and_attributes_2, colors):
         ax.add_patch(Rectangle((region.x + x_offset, region.y),
                                region.width,
                                region.height,
                                fill=False,
-                               edgecolor='red',
+                               edgecolor=color,
                                linewidth=3))
         ax.text(region.x + x_offset, region.y, region.names[0] + f" ({attribute})", style='italic',
                 bbox={'facecolor': 'white', 'alpha': 0.7, 'pad': 10})
@@ -196,28 +198,29 @@ def generate_eval_set_attribute_noun_dependencies(scene_graphs, attribute_tuples
                                         # TODO: enforce that distractor subjects are the same?
                                         if distractor_visual_distractor_subject: # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
                                             print("Found distractor image: ", scene_graph_distractor.image)
-                                            show_image_pair(scene_graph_target.image, scene_graph_distractor.image, [(target_subject, target_attribute), (visual_distractor_subject, distractor_attribute)], [(distractor_subject, distractor_attribute), (distractor_visual_distractor_subject, target_attribute)])
+                                            # show_image_pair(scene_graph_target.image, scene_graph_distractor.image, [(target_subject, target_attribute), (visual_distractor_subject, distractor_attribute)], [(distractor_subject, distractor_attribute), (distractor_visual_distractor_subject, target_attribute)])
 
-                                            # Add example
-                                            eval_set.append({
+                                            # Add tuple of example and counter-example
+                                            eval_set.append(({
                                                 "img_target": scene_graph_target.image.id,
                                                 "img_distractor": scene_graph_distractor.image.id,
                                                 "target_subject": target_subject,
                                                 "target_attribute": target_attribute,
                                                 "visual_distractor_subject": visual_distractor_subject,
                                                 "visual_distractor_attribute": distractor_attribute,
-                                            })
+                                            },
+                                                {
+                                                    "img_target": scene_graph_distractor.image.id,
+                                                    "img_distractor": scene_graph_target.image.id,
+                                                    "target_subject": distractor_subject,
+                                                    "target_attribute": distractor_attribute,
+                                                    "visual_distractor_subject": distractor_visual_distractor_subject,
+                                                    "visual_distractor_attribute": target_attribute,
+                                                }
+                                            ))
 
-                                            # Add counter-example
-                                            eval_set.append({
-                                                "img_target": scene_graph_distractor.image.id,
-                                                "img_distractor": scene_graph_target.image.id,
-                                                "target_subject": distractor_subject,
-                                                "target_attribute": distractor_attribute,
-                                                "visual_distractor_subject": distractor_visual_distractor_subject,
-                                                "visual_distractor_attribute": target_attribute,
-                                            })
-
+                                            # # Add counter-example
+                                            # eval_set.append()
 
     return eval_set
 
@@ -266,17 +269,33 @@ def get_scene_graphs_by_ids(ids_list,
 
 if __name__ == "__main__":
 
-    image_ids = read_split_ids_from_file(SPLIT_TEST)
+    # image_ids = read_split_ids_from_file(SPLIT_TEST)
+    #
+    # print("Loading scene graphs.. ", end="")
+    # scene_graphs = get_scene_graphs_by_ids(
+    #     image_ids,
+    #     data_dir=DATA_DIR,
+    #     image_data_dir=IMAGE_DATA_DIR,
+    # )
+    # print(f"done loading {len(scene_graphs)} scene graphs.")
+    #
+    # eval_set = generate_eval_set_attribute_noun_dependencies(scene_graphs, ATTRIBUTE_TUPLES)
+    #
+    # print(eval_set)
+    # print(f"Found {len(eval_set)} examples.")
+    #
+    # pickle.dump(eval_set, open("data/attribute_noun.p", "wb"))
 
-    print("Loading scene graphs.. ", end="")
-    scene_graphs = get_scene_graphs_by_ids(
-        image_ids,
-        data_dir=DATA_DIR,
-        image_data_dir=IMAGE_DATA_DIR,
-    )
-    print(f"done loading {len(scene_graphs)} scene graphs.")
-
-    eval_set = generate_eval_set_attribute_noun_dependencies(scene_graphs, ATTRIBUTE_TUPLES)
+    eval_set = pickle.load(open("data/attribute_noun.p", "rb"))
 
     print(eval_set)
-    print(f"Found {len(eval_set)} examples.")
+
+    for example, counterexample in eval_set:
+        scene_graph_target = get_scene_graphs_by_ids([example["img_target"]], data_dir=DATA_DIR, image_data_dir=IMAGE_DATA_DIR)[0]
+        scene_graph_distractor = get_scene_graphs_by_ids([example["img_distractor"]], data_dir=DATA_DIR, image_data_dir=IMAGE_DATA_DIR)[0]
+
+        show_image_pair(scene_graph_target.image, scene_graph_distractor.image,
+                        [(example["target_subject"], example["target_attribute"]),
+                         (example["visual_distractor_subject"], example["visual_distractor_attribute"])],
+                        [(counterexample["target_subject"], counterexample["target_attribute"]),
+                         (counterexample["visual_distractor_subject"], counterexample["visual_distractor_attribute"])])
