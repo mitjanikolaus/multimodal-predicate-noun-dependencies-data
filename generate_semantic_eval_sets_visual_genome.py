@@ -108,7 +108,7 @@ def show_image_pair(image_1, image_2, regions_and_attributes_1, regions_and_attr
     plt.show()
 
 
-def check_is_subj_attr_in_scene_graph(scene_graph, subject, attribute):
+def is_subj_attr_in_scene_graph(scene_graph, subject, attribute):
     for relationship in scene_graph.relationships:
         subject_synset = (
             relationship.subject.synsets[0].name
@@ -162,10 +162,9 @@ def generate_eval_set_attribute_noun_dependencies(scene_graphs, attribute_tuples
                     target_subject = relationship_target.subject
 
                     # check that distractor IS NOT in same image:
-                    distractor_in_target_image = check_is_subj_attr_in_scene_graph(
-                        scene_graph_target, target_subject, distractor_attribute
-                    )
-                    if not distractor_in_target_image:
+                    if not is_subj_attr_in_scene_graph(
+                            scene_graph_target, target_subject, distractor_attribute
+                    ):
 
                         # check that visual distractor IS in image
                         visual_distractor_subject = (
@@ -181,14 +180,14 @@ def generate_eval_set_attribute_noun_dependencies(scene_graphs, attribute_tuples
                             for scene_graph_distractor in scene_graphs:
 
                                 # check that distractor IS in the distractor image:
-                                distractor_subject = check_is_subj_attr_in_scene_graph(
+                                distractor_subject = is_subj_attr_in_scene_graph(
                                     scene_graph_distractor, target_subject, distractor_attribute
                                 )
 
                                 if distractor_subject != False:
 
                                     # check that target IS NOT in same image:
-                                    target_in_distractor_image = check_is_subj_attr_in_scene_graph(
+                                    target_in_distractor_image = is_subj_attr_in_scene_graph(
                                         scene_graph_distractor, distractor_subject, target_attribute
                                     )
 
