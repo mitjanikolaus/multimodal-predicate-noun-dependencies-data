@@ -18,14 +18,17 @@ import requests
 def get_most_common_attributes():
     """Get the most common attributes from the open images test set"""
     relationship_names = pd.read_csv("data/oidv6-class-descriptions.csv")
-
-    attribute_names = pd.read_csv("data/oidv6-attributes-description_fixed.csv", names=["LabelName", "DisplayName"],
+    attribute_names_new = pd.read_csv("data/oidv6-attributes-description_new.csv", names=["LabelName", "DisplayName"],
+                                  header=None)
+    attribute_names_overlap = pd.read_csv("data/oidv6-attributes-description_overlap.csv", names=["LabelName", "DisplayName"],
                                   header=None)
 
     relationship_names.set_index("LabelName", inplace=True)
-    attribute_names.set_index("LabelName", inplace=True)
+    attribute_names_new.set_index("LabelName", inplace=True)
+    attribute_names_overlap.set_index("LabelName", inplace=True)
 
-    relationship_names = relationship_names.append(attribute_names)
+    relationship_names.update(attribute_names_overlap)
+    relationship_names = relationship_names.append(attribute_names_new)
 
     relationships = pd.read_csv("data/oidv6-test-annotations-vrd.csv")
     relationships.reset_index(drop=True, inplace=True)
