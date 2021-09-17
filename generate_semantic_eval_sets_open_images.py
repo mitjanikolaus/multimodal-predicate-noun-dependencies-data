@@ -14,16 +14,18 @@ from matplotlib.patches import Rectangle
 import io
 import requests
 
+NOUN_SYNONYMS = [{"Table", "Desk"}, {"Table", "Coffee table"}]
+
 ATTRIBUTE_TUPLES = [
-    ("Wood", "Plastic"),
-    ("Wood", "Transparent"),
-    ("Wood", "Leather"),
-    ("Wood", "Textile"),
+    ("Wooden", "Plastic"),
+    ("Wooden", "Transparent"),
+    ("Wooden", "(made of)Leather"),
+    ("Wooden", "(made of)Textile"),
     ("Smile", "Cry"),
     ("Tree", "Table"),
-    ("Plastic", "Leather"),
-    ("Plastic", "Textile"),
-    ("Leather", "Textile"),
+    ("Plastic", "(made of)Leather"),
+    ("Plastic", "(made of)Textile"),
+    ("(made of)Leather", "(made of)Textile"),
     ("Car", "Horse"),
     ("Car", "Motorcycle"),
     ("Car", "Bicycle"),
@@ -34,7 +36,12 @@ ATTRIBUTE_TUPLES = [
     ("Stand", "Lay"),
     ("Stand", "Jump"),
 ]
-# [('Standing', 29768), ('Smile', 12492), ('Sitting', 11017), ('Wood', 4186), ('Walking', 2723), ('Table', 1850), ('Running', 1724), ('Plastic', 1684), ('Glasses', 931), ('Talk', 922), ('Transparent', 917), ('Lay', 822), ('Tree', 807), ('Leather', 707), ('Jumping', 608), ('Sunglasses', 544), ('Roller skates', 489), ('Textile', 481), ('Houseplant', 432), ('Horse', 414), ('Coffee', 390), ('Car', 376), ('High heels', 315), ('Sandal', 314), ('Bicycle', 305), ('Tea', 289), ('Goggles', 288), ('Desk', 278), ('Sun hat', 264), ('Singing', 237), ('Fedora', 228), ('Dog', 222), ('Wine', 210), ('Boat', 209), ('Bicycle helmet', 183), ('Cowboy hat', 180), ('Canoe', 158), ('Football helmet', 157), ('Wheelchair', 152), ('Chair', 151), ('Boot', 149), ('Guitar', 144), ('Skateboard', 142), ('Football', 136), ('Necklace', 120), ('Baseball glove', 114), ('Surfboard', 110), ('Cake', 108), ('Tennis racket', 105), ('Paddle', 103), ('Motorcycle', 93), ('Scarf', 89), ('Trumpet', 87), ('Table tennis racket', 86), ('Swim cap', 82), ('Cart', 81), ('Racket', 81), ('French horn', 80), ('Violin', 80), ('Camera', 69), ('Coffee table', 66), ('Bed', 62), ('Beer', 61), ('Bus', 60), ('Volleyball (Ball)', 56), ('Crying', 55), ('Sushi', 55), ('Handbag', 53), ('Tiara', 53), ('Microphone', 52), ('Cello', 52), ('Trombone', 51), ('Baseball bat', 51), ('Crown', 48), ('Cocktail', 48), ('Juice', 46), ('Accordion', 43), ('Segway', 43), ('Saxophone', 43), ('Balance beam', 43), ('Billiard table', 42), ('Sombrero', 41), ('Piano', 41), ('Rifle', 40), ('Harp', 38), ('Flute', 38), ('Drum', 35), ('Musical keyboard', 33), ('Bicycle wheel', 32), ('Bottle', 31), ('Hiking equipment', 30), ('Earrings', 29), ('Rugby ball', 28), ('Bow and arrow', 25), ('Palm tree', 24), ('Rose', 24), ('Wine glass', 23), ('Golf cart', 23), ('Elephant', 22), ('Balloon', 22), ('Belt', 21), ('Oyster', 20), ('Infant bed', 19), ('Watermelon', 19), ('Ski', 17), ('Cutting board', 17), ('Book', 15), ('Salad', 15), ('Tripod', 15), ('Orange', 15), ('Shotgun', 14), ('Dumbbell', 14), ('Grape', 13), ('Strawberry', 13), ('Dog bed', 12), ('Coffee cup', 11), ('Harpsichord', 11), ('Mobile phone', 11), ('Gondola', 10), ('Cat', 10), ('Apple', 10), ('Truck', 10), ('Grapefruit', 10), ('Bowling equipment', 9), ('Horizontal bar', 9), ('Tennis ball', 9), ('Stationary bicycle', 9), ('Tent', 8), ('Airplane', 8), ('Watch', 8), ('Organ (Musical Instrument)', 8), ('Ladder', 8), ('Sofa bed', 7), ('Muffin', 7), ('Suitcase', 7), ('Unicycle', 6), ('Backpack', 6), ('Binoculars', 6), ('Van', 6), ('Doll', 6), ('Handgun', 5), ('Limousine', 5), ('Cake stand', 5), ('Lobster', 5), ('Ambulance', 5), ('Panda', 5), ('Cricket ball', 5), ('Countertop', 5), ('Stool', 4), ('Banjo', 4), ('Cat furniture', 4), ('Indoor rower', 4), ('Monkey', 4), ('Bench', 4), ('Cannon', 3), ('Helicopter', 3), ('Oboe', 3), ('Sword', 3), ('Tank', 3), ('Flying disc', 3), ('Teddy bear', 3), ('Washing machine', 3), ('Treadmill', 2), ('Box', 2), ('Ice cream', 2), ('Taxi', 2), ('Studio couch', 2), ('Train', 2), ('Carrot', 2), ('Candy', 2), ('Wok', 2), ('Common sunflower', 2), ('Sea lion', 2), ('Stethoscope', 2), ('Jet ski', 2), ('Pen', 2), ('Kitchen & dining room table', 2), ('Pomegranate', 2), ('Milk', 1), ('Plate', 1), ('Honeycomb', 1), ('Egg (Food)', 1), ('Lizard', 1), ('Loveseat', 1), ('Dolphin', 1), ('Whale', 1), ('Brown bear', 1), ('Picnic basket', 1), ('Plastic bag', 1), ('Punching bag', 1), ('Lemon', 1), ('Cheese', 1), ('Cupboard', 1), ('Personal flotation device', 1), ('Snowmobile', 1), ('Flowerpot', 1), ('Broccoli', 1), ('Cucumber', 1), ('Christmas tree', 1), ('Hamster', 1), ('Pasta', 1), ('Shark', 1), ('Kite', 1), ('Tart', 1), ('Pumpkin', 1), ('Crab', 1), ('Mug', 1), ('Dinosaur', 1), ('Tablet computer', 1), ('Bowl', 1)]
+attributes_counter = [('Stand', 29768), ('Smile', 12492), ('Sit', 11017), ('Wooden', 4186), ('Walk', 2723), ('Table', 1850), ('Run', 1724), ('Plastic', 1684), ('Glasses', 931), ('Talk', 922), ('Transparent', 917), ('Lay', 822), ('Tree', 807), ('(made of)Leather', 707), ('Jump', 608), ('Sunglasses', 544), ('Roller skates', 489), ('(made of)Textile', 481), ('Houseplant', 432), ('Horse', 414), ('Coffee', 390), ('Car', 376), ('High heels', 315), ('Sandal', 314), ('Bicycle', 305), ('Tea', 289), ('Goggles', 288), ('Desk', 278), ('Sun hat', 264), ('Sing', 237), ('Fedora', 228), ('Dog', 222), ('Wine', 210), ('Boat', 209), ('Bicycle helmet', 183), ('Cowboy hat', 180), ('Canoe', 158), ('Football helmet', 157), ('Wheelchair', 152), ('Chair', 151), ('Boot', 149), ('Guitar', 144), ('Skateboard', 142), ('Football', 136), ('Necklace', 120), ('Baseball glove', 114), ('Surfboard', 110), ('Cake', 108), ('Tennis racket', 105), ('Paddle', 103), ('Motorcycle', 93), ('Scarf', 89), ('Trumpet', 87), ('Table tennis racket', 86), ('Swim cap', 82), ('Cart', 81), ('Racket', 81), ('French horn', 80), ('Violin', 80), ('Camera', 69), ('Coffee table', 66), ('Bed', 62), ('Beer', 61), ('Bus', 60), ('Volleyball (Ball)', 56), ('Cry', 55), ('Sushi', 55), ('Handbag', 53), ('Tiara', 53), ('Microphone', 52), ('Cello', 52), ('Trombone', 51), ('Baseball bat', 51), ('Crown', 48), ('Cocktail', 48), ('Juice', 46), ('Accordion', 43), ('Segway', 43), ('Saxophone', 43), ('Balance beam', 43), ('Billiard table', 42), ('Sombrero', 41), ('Piano', 41), ('Rifle', 40), ('Harp', 38), ('Flute', 38), ('Drum', 35), ('Musical keyboard', 33), ('Bicycle wheel', 32), ('Bottle', 31), ('Hiking equipment', 30), ('Earrings', 29), ('Rugby ball', 28), ('Bow and arrow', 25), ('Palm tree', 24), ('Rose', 24), ('Wine glass', 23), ('Golf cart', 23), ('Elephant', 22), ('Balloon', 22), ('Belt', 21), ('Oyster', 20), ('Infant bed', 19), ('Watermelon', 19), ('Ski', 17), ('Cutting board', 17), ('Book', 15), ('Salad', 15), ('Tripod', 15), ('Orange', 15), ('Shotgun', 14), ('Dumbbell', 14), ('Grape', 13), ('Strawberry', 13), ('Dog bed', 12), ('Coffee cup', 11), ('Harpsichord', 11), ('Mobile phone', 11), ('Gondola', 10), ('Cat', 10), ('Apple', 10), ('Truck', 10), ('Grapefruit', 10), ('Bowling equipment', 9), ('Horizontal bar', 9), ('Tennis ball', 9), ('Stationary bicycle', 9), ('Tent', 8), ('Airplane', 8), ('Watch', 8), ('Organ (Musical Instrument)', 8), ('Ladder', 8), ('Sofa bed', 7), ('Muffin', 7), ('Suitcase', 7), ('Unicycle', 6), ('Backpack', 6), ('Binoculars', 6), ('Van', 6), ('Doll', 6), ('Handgun', 5), ('Limousine', 5), ('Cake stand', 5), ('Lobster', 5), ('Ambulance', 5), ('Panda', 5), ('Cricket ball', 5), ('Countertop', 5), ('Stool', 4), ('Banjo', 4), ('Cat furniture', 4), ('Indoor rower', 4), ('Monkey', 4), ('Bench', 4), ('Cannon', 3), ('Helicopter', 3), ('Oboe', 3), ('Sword', 3), ('Tank', 3), ('Flying disc', 3), ('Teddy bear', 3), ('Washing machine', 3), ('Treadmill', 2), ('Box', 2), ('Ice cream', 2), ('Taxi', 2), ('Studio couch', 2), ('Train', 2), ('Carrot', 2), ('Candy', 2), ('Wok', 2), ('Common sunflower', 2), ('Sea lion', 2), ('Stethoscope', 2), ('Jet ski', 2), ('Pen', 2), ('Kitchen & dining room table', 2), ('Pomegranate', 2), ('Milk', 1), ('Plate', 1), ('Honeycomb', 1), ('Egg (Food)', 1), ('Lizard', 1), ('Loveseat', 1), ('Dolphin', 1), ('Whale', 1), ('Brown bear', 1), ('Picnic basket', 1), ('Plastic bag', 1), ('Punching bag', 1), ('Lemon', 1), ('Cheese', 1), ('Cupboard', 1), ('Personal flotation device', 1), ('Snowmobile', 1), ('Flowerpot', 1), ('Broccoli', 1), ('Cucumber', 1), ('Christmas tree', 1), ('Hamster', 1), ('Pasta', 1), ('Shark', 1), ('Kite', 1), ('Tart', 1), ('Pumpkin', 1), ('Crab', 1), ('Mug', 1), ('Dinosaur', 1), ('Tablet computer', 1), ('Bowl', 1)]
+attributes_names = [name for name, count in attributes_counter]
+
+for attr1, attr2 in ATTRIBUTE_TUPLES:
+    assert attr1 in attributes_names
+    assert attr2 in attributes_names
 
 
 def show_image(image, regions_and_attributes=None):
@@ -57,19 +64,27 @@ def show_image(image, regions_and_attributes=None):
 
 
 def show_image_pair(image_1_path, image_2_path, regions_and_attributes_1, regions_and_attributes_2):
-
     fig = plt.gcf()
     fig.set_size_inches(18.5, 10.5)
     img_1_data = PIL_Image.open(image_1_path)
     img_2_data = PIL_Image.open(image_2_path)
 
+    # Transform both images to grayscale if one of them has only one channel
+    if img_1_data.mode == "L" or img_2_data.mode == "L":
+        img_1_data = img_1_data.convert("L")
+        img_2_data = img_2_data.convert("L")
+
     # Make images equal size:
     if img_2_data.height > img_1_data.height:
-        img_1_data = img_1_data.crop((0, 0, img_2_data.width, img_2_data.height))
+        img_1_data_adjusted = img_1_data.crop((0, 0, img_2_data.width, img_2_data.height))
+        img_2_data_adjusted = img_2_data
     else:
-        img_2_data = img_2_data.crop((0, 0, img_1_data.width, img_1_data.height))
+        img_1_data_adjusted = img_1_data
+        img_2_data_adjusted = img_2_data.crop((0, 0, img_1_data.width, img_1_data.height))
 
-    image = np.column_stack((img_1_data, img_2_data))
+    if img_1_data_adjusted.mode == "L":
+        img_1_data_adjusted = img_1_data_adjusted.convert('L')
+    image = np.column_stack((img_1_data_adjusted, img_2_data_adjusted))
 
     plt.imshow(image)
     ax = plt.gca()
@@ -114,7 +129,9 @@ def find_other_subj_with_attr(sample, subject, attribute):
     if sample.relationships:
         for relationship in sample.relationships.detections:
             if relationship.Label1 != subject and relationship.Label2 == attribute:
-                return relationship
+                # verify that they are not synonyms:
+                if not {subject, relationship.Label1} in NOUN_SYNONYMS:
+                    return relationship
 
     return None
 
@@ -173,15 +190,15 @@ def generate_eval_set_attribute_noun_dependencies(dataset, attribute_tuples):
                                             )
                                             # TODO: enforce that distractor subjects are the same?
                                             if counterexample_relationship_visual_distractor: # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
-                                                print("Found distractor image: ", sample_distractor.open_images_id)
+                                                print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
                                                 # show_image_pair(sample_target.filepath, sample_distractor.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
 
                                                 # Add tuple of example and counter-example
                                                 eval_set[target_tuple].append(({
-                                                    "img_target": sample_target.filepath,
-                                                    "img_distractor": sample_distractor.filepath,
-                                                    "relationship_target": relationship_target,
-                                                    "relationship_visual_distractor": relationship_visual_distractor,
+                                                        "img_target": sample_target.filepath,
+                                                        "img_distractor": sample_distractor.filepath,
+                                                        "relationship_target": relationship_target,
+                                                        "relationship_visual_distractor": relationship_visual_distractor,
                                                     },
                                                     {
                                                         "img_target": sample_distractor.filepath,
