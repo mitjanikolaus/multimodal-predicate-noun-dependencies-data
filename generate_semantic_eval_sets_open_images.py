@@ -76,11 +76,11 @@ def show_image_pair(image_1_path, image_2_path, regions_and_attributes_1, region
 
     # Make images equal size:
     if img_2_data.height > img_1_data.height:
-        img_1_data_adjusted = img_1_data.crop((0, 0, img_2_data.width, img_2_data.height))
+        img_1_data_adjusted = img_1_data.crop((0, 0, img_1_data.width, img_2_data.height))
         img_2_data_adjusted = img_2_data
     else:
         img_1_data_adjusted = img_1_data
-        img_2_data_adjusted = img_2_data.crop((0, 0, img_1_data.width, img_1_data.height))
+        img_2_data_adjusted = img_2_data.crop((0, 0, img_2_data.width, img_1_data.height))
 
     if img_1_data_adjusted.mode == "L":
         img_1_data_adjusted = img_1_data_adjusted.convert('L')
@@ -216,26 +216,26 @@ if __name__ == "__main__":
     # relationships = pd.read_csv("data/relationships_test_display_names.csv")
     # most_common_attributes = Counter(relationships["LabelName2"].values).most_common()
 
-    dataset = foz.load_zoo_dataset(
-        "open-images-v6",
-        split="test",
-        label_types=["relationships"],
-        max_samples=5000,
-    )
+    # dataset = foz.load_zoo_dataset(
+    #     "open-images-v6",
+    #     split="test",
+    #     label_types=["relationships"],
+    #     max_samples=5000,
+    # )
 
     # session = fiftyone.launch_app(dataset)
     # session.view = dataset.sort_by("open_images_id").limit(10)
     # session.wait()
 
-    eval_sets = generate_eval_set_attribute_noun_dependencies(dataset, ATTRIBUTE_TUPLES)
-
-    pickle.dump(eval_sets, open("data/attribute_noun.p", "wb"))
+    # eval_sets = generate_eval_set_attribute_noun_dependencies(dataset, ATTRIBUTE_TUPLES)
+    #
+    # pickle.dump(eval_sets, open("data/attribute_noun.p", "wb"))
 
     eval_sets = pickle.load(open("data/attribute_noun.p", "rb"))
 
     for tuple, eval_set in eval_sets.items():
         if len(eval_set) > 0:
             print(f"{tuple} ({len(eval_set)} examples)")
-            #  example, counterexample in eval_set:
-                # show_image_pair(example["img_target"], example["img_distractor"], [example["relationship_target"], example["relationship_visual_distractor"]],
-                #                 [counterexample["relationship_target"], counterexample["relationship_visual_distractor"]])
+            # for example, counterexample in eval_set:
+            #     show_image_pair(example["img_target"], example["img_distractor"], [example["relationship_target"], example["relationship_visual_distractor"]],
+            #                     [counterexample["relationship_target"], counterexample["relationship_visual_distractor"]])
