@@ -13,6 +13,7 @@ from PIL import Image as PIL_Image
 from matplotlib.patches import Rectangle
 import io
 import requests
+from tqdm import tqdm
 
 
 def get_most_common_attributes():
@@ -43,6 +44,21 @@ def get_most_common_attributes():
     print(Counter(relationships["RelationshipLabel"].values).most_common())
 
     relationships.to_csv("data/relationships_test_display_names.csv")
+
+    # Find nouns that can be both subject and object of a relationship
+    subj_and_obj = set(relationships["LabelName2"].values) & set(relationships["LabelName1"].values)
+    subj_and_obj_filtered = set()
+    for noun in tqdm(subj_and_obj):
+        rel_view_1 = relationships[relationships["LabelName1"] == noun]
+        rel_view_2 = relationships[relationships["LabelName2"] == noun]
+        overlapping_rel = set(rel_view_1["RelationshipLabel"].values) & set(rel_view_2["RelationshipLabel"].values)
+        if overlapping_rel:
+            print(noun)
+            print(overlapping_rel)
+            subj_and_obj_filtered.add(noun)
+
+    print(subj_and_obj_filtered)
+
 
 
 
