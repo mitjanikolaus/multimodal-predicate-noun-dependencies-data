@@ -1,7 +1,7 @@
 import argparse
 import pickle
 
-import fiftyone
+from fiftyone import ViewField as F
 import fiftyone.zoo as foz
 import numpy as np
 
@@ -459,23 +459,31 @@ for noun1, noun2 in NOUN_TUPLES:
     assert noun2 in nouns_names, f"{noun2} is misspelled"
 
 
-def drop_noun_synonyms(nouns):
-    filtered_nouns = []
-    for noun in nouns:
+def drop_synonyms(relationships, synonyms_list):
+    filtered_rels = []
+    for relationship in relationships:
         synonym_present = False
-        synonym_set_first_element = noun
-        for synonyms in NOUN_SYNONYMS:
+        for synonyms in synonyms_list:
             if synonym_present:
                 break
-            if noun in synonyms:
-                synonym_set_first_element = synonyms[0]
-                for other_noun in filtered_nouns:
-                    if other_noun in synonyms:
+            label = (
+                relationship.Label2
+                if synonyms_list == ATTRIBUTE_SYNONYMS
+                else relationship.Label1
+            )
+            if label in synonyms:
+                for other_rel in filtered_rels:
+                    label_other = (
+                        other_rel.Label2
+                        if synonyms_list == ATTRIBUTE_SYNONYMS
+                        else other_rel.Label1
+                    )
+                    if label_other in synonyms:
                         synonym_present = True
                         break
         if not synonym_present:
-            filtered_nouns.append(synonym_set_first_element)
-    return filtered_nouns
+            filtered_rels.append(relationship)
+    return filtered_rels
 
 
 def show_image_pair(
@@ -641,83 +649,110 @@ def sample_exists_in_eval_set(sample, eval_set):
 
 
 def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
+    eval_sets = {tuple: [] for tuple in noun_tuples}
+
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
         split="test",
         label_types=["relationships"],
-        max_samples=args.max_samples,
+        max_samples=max_samples,
+        # classes=[target_noun],
+        # dataset_name="ds_target",
+        drop_existing_dataset=True,  # We need to drop the existing data to get the new filtered data
     )
-    eval_sets = {tuple: [] for tuple in noun_tuples}
 
     for target_tuple in noun_tuples:
         print("Looking for: ", target_tuple)
         target_noun, distractor_noun = target_tuple
-        for example in tqdm(dataset):
+
+        # Compute matching images
+        # TODO use synonym sets!
+        is_target = F("Label1") == target_noun
+        is_distractor = F("Label1") == distractor_noun
+        matching_images = dataset.match(
+            (F("relationships.detections").filter(is_target).length() > 0)
+            & (F("relationships.detections").filter(is_distractor).length() > 0)
+        )
+
+        for example in tqdm(matching_images):
             if example.relationships:
-                for relationship_target in example.relationships.detections:
+                possible_relationships = [
+                    rel
+                    for rel in example.relationships.detections
+                    if rel.Label1 == target_noun
+                ]
+                possible_relationships = drop_synonyms(
+                    possible_relationships, ATTRIBUTE_SYNONYMS
+                )
 
-                    target_subject = relationship_target.Label1
+                for relationship_target in possible_relationships:
+                    target_attribute = relationship_target.Label2
 
-                    # TODO: check for noun synonyms!
-                    if target_noun == target_subject:
-                        target_attribute = relationship_target.Label2
+                    # check that distractor IS NOT in same image:
+                    if not is_subj_attr_in_image(
+                        example, distractor_noun, target_attribute
+                    ):
+                        # check that visual distractor IS in image
+                        relationship_visual_distractor = find_subj_with_other_attr(
+                            example, distractor_noun, relationship_target
+                        )
+                        if relationship_visual_distractor:
 
-                        # check that distractor IS NOT in same image:
-                        if not is_subj_attr_in_image(
-                            example, distractor_noun, target_attribute
-                        ):
-                            # check that visual distractor IS in image
-                            relationship_visual_distractor = find_subj_with_other_attr(
-                                example, distractor_noun, relationship_target
+                            # Start looking for counterexample image..
+                            is_counterexample_relation = F("Label1").is_in(
+                                [distractor_noun]
+                            ) & F("Label2").is_in([target_attribute])
+                            matching_images_counterexample = matching_images.match(
+                                F("relationships.detections")
+                                .filter(is_counterexample_relation)
+                                .length()
+                                > 0
                             )
-                            if relationship_visual_distractor:
-                                # print("Found match: ", sample_target.image)
 
-                                # print("Looking for counterexample image.. ")
-                                for counterexample in dataset:
-
-                                    # check that distractor IS in the distractor image:
-                                    counterexample_relationship_target = is_subj_attr_in_image(
-                                        counterexample,
-                                        distractor_noun,
-                                        target_attribute,
+                            for counterexample in matching_images_counterexample:
+                                # check that target IS NOT in same image:
+                                if not is_subj_attr_in_image(
+                                    counterexample, target_noun, target_attribute,
+                                ):
+                                    counterexample_possible_relationships = [
+                                        rel
+                                        for rel in counterexample.relationships.detections
+                                        if rel.Label1 == distractor_noun
+                                        and rel.Label2 == target_attribute
+                                    ]
+                                    counterexample_possible_relationships = drop_synonyms(
+                                        counterexample_possible_relationships,
+                                        ATTRIBUTE_SYNONYMS,
                                     )
-                                    if counterexample_relationship_target:
-                                        # TODO: distractor subject == target subject?!
 
-                                        # check that target IS NOT in same image:
-                                        if not is_subj_attr_in_image(
+                                    for (
+                                        counterexample_relationship_target
+                                    ) in counterexample_possible_relationships:
+
+                                        # check that visual distractor IS in image
+                                        counterexample_relationship_visual_distractor = find_subj_with_other_attr(
                                             counterexample,
-                                            target_subject,
-                                            target_attribute,
-                                        ):
+                                            target_noun,
+                                            counterexample_relationship_target,
+                                        )
+                                        # TODO: enforce that distractor subjects are the same?
+                                        if counterexample_relationship_visual_distractor:  # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
+                                            sample = {
+                                                "img_example": example.filepath,
+                                                "img_counterexample": counterexample.filepath,
+                                                "relationship_target": relationship_target,
+                                                "relationship_visual_distractor": relationship_visual_distractor,
+                                                "counterexample_relationship_target": counterexample_relationship_target,
+                                                "counterexample_relationship_visual_distractor": counterexample_relationship_visual_distractor,
+                                            }
+                                            if not sample_exists_in_eval_set(
+                                                sample, eval_sets[target_tuple]
+                                            ):
+                                                # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
+                                                # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
 
-                                            # check that visual distractor IS in image
-                                            counterexample_relationship_visual_distractor = find_subj_with_other_attr(
-                                                counterexample,
-                                                target_noun,
-                                                counterexample_relationship_target,
-                                            )
-                                            # TODO: enforce that distractor subjects are the same?
-                                            if counterexample_relationship_visual_distractor:  # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
-                                                sample = {
-                                                    "img_example": example.filepath,
-                                                    "img_counterexample": counterexample.filepath,
-                                                    "relationship_target": relationship_target,
-                                                    "relationship_visual_distractor": relationship_visual_distractor,
-                                                    "counterexample_relationship_target": counterexample_relationship_target,
-                                                    "counterexample_relationship_visual_distractor": counterexample_relationship_visual_distractor,
-                                                }
-                                                if not sample_exists_in_eval_set(
-                                                    sample, eval_sets[target_tuple]
-                                                ):
-                                                    # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
-                                                    # show_image_pair(sample_target.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
-
-                                                    # Add example and counter-example
-                                                    eval_sets[target_tuple].append(
-                                                        sample
-                                                    )
+                                                # Add example and counter-example
+                                                eval_sets[target_tuple].append(sample)
 
         print("saving intermediate results..")
         pickle.dump(eval_sets, open(f"data/noun-{max_samples}.p", "wb"))
@@ -731,7 +766,7 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
         "open-images-v6",
         split="test",
         label_types=["relationships"],
-        max_samples=args.max_samples,
+        max_samples=max_samples,
     )
 
     eval_sets = {tuple: [] for tuple in attribute_tuples}
@@ -812,9 +847,6 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
         print(f"Found {len(eval_sets[target_tuple])} examples for {target_tuple}.\n\n")
 
     return eval_sets
-
-
-ACCESSORIES = ["Glasses", "Sunglasses", "Goggles"]
 
 
 def parse_args():
