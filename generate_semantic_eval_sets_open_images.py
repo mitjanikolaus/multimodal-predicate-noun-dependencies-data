@@ -14,23 +14,21 @@ from utils import get_tuples_no_duplicates
 
 THRESHOLD_SAME_BOUNDING_BOX = 0.02
 
-NOUN_SYNONYMS = [
-    ["Man", "Boy"],
-    ["Woman", "Girl"],
-    ["Table", "Desk"],
-    ["Table", "Coffee table"],
-]
-ATTRIBUTE_SYNONYMS = []
 
 ####ATTRIBUTES (Label2)
 OBJECTS = ["Houseplant", "Coffee", "Tea", "Cake"]
 OBJECTS_TUPLES = get_tuples_no_duplicates(OBJECTS)
 
-SHOES = ["High heels", "Sandal", "Boot"]
-SHOES_TUPLES = get_tuples_no_duplicates(SHOES)
+# SHOES = ["High heels", "Sandal", "Boot"]
+# SHOES_TUPLES = get_tuples_no_duplicates(SHOES)
 
-HATS = ["Sun hat", "Fedora", "Bicycle helmet", "Cowboy hat", "Football helmet"]
-HATS_TUPLES = get_tuples_no_duplicates(HATS)
+# TODO: add emotional states?
+ACCESSORIES = ["Glasses", "Sun hat", "Bicycle helmet", "High heels", "Necklace", "Scarf", "Swim cap", "Handbag"]
+ACCESSORIES_TUPLES = get_tuples_no_duplicates(ACCESSORIES)
+
+
+# HATS = ["Sun hat", "Fedora", "Bicycle helmet", "Cowboy hat", "Football helmet"]
+# HATS_TUPLES = get_tuples_no_duplicates(HATS)
 
 TEXTURES = ["Wooden", "Plastic", "Transparent", "(made of)Leather", "(made of)Textile"]
 TEXTURES_TUPLES = get_tuples_no_duplicates(TEXTURES)
@@ -74,9 +72,6 @@ FURNITURE = ["Table", "Chair", "Wheelchair"]
 FURNITURE_TUPLES = get_tuples_no_duplicates(FURNITURE)
 
 ATTRIBUTE_TUPLES_OTHER = [
-    ("Glasses", "Sunglasses"),
-    ("Glasses", "Goggles"),
-    ("Goggles", "Sunglasses"),
     ("Smile", "Cry"),
     ("Table", "Tree"),
     ("Sit", "Walk"),
@@ -103,8 +98,7 @@ ATTRIBUTE_TUPLES = (
     + FURNITURE_TUPLES
     + TEXTURES_TUPLES
     + OBJECTS_TUPLES
-    + SHOES_TUPLES
-    + HATS_TUPLES
+    + ACCESSORIES_TUPLES
     + ATTRIBUTE_TUPLES_OTHER
 )
 
@@ -209,7 +203,7 @@ nouns_counter = [
     ("Cucumber", 1),
     ("Bread", 1),
 ]
-nouns_names = [name for name, _ in nouns_counter]
+NOUN_NAMES = [name for name, _ in nouns_counter]
 
 relationships_counter = [
     ("is", 68343),
@@ -448,41 +442,54 @@ attributes_counter = [
     ("Tablet computer", 1),
     ("Bowl", 1),
 ]
-attributes_names = [name for name, _ in attributes_counter]
+ATTRIBUTES_NAMES = [name for name, _ in attributes_counter]
 
 for attr1, attr2 in ATTRIBUTE_TUPLES_OTHER:
-    assert attr1 in attributes_names, f"{attr1} is misspelled"
-    assert attr2 in attributes_names, f"{attr2} is misspelled"
+    assert attr1 in ATTRIBUTES_NAMES, f"{attr1} is misspelled"
+    assert attr2 in ATTRIBUTES_NAMES, f"{attr2} is misspelled"
 
 for noun1, noun2 in NOUN_TUPLES:
-    assert noun1 in nouns_names, f"{noun1} is misspelled"
-    assert noun2 in nouns_names, f"{noun2} is misspelled"
+    assert noun1 in NOUN_NAMES, f"{noun1} is misspelled"
+    assert noun2 in NOUN_NAMES, f"{noun2} is misspelled"
 
 
-def drop_synonyms(relationships, synonyms_list):
+NOUN_SYNONYMS_LIST = [
+    ["Man", "Boy"],
+    ["Woman", "Girl"],
+    ["Table", "Desk"],
+    ["Table", "Coffee table"],
+]
+NOUN_SYNONYMS = {name: name for name in NOUN_NAMES}
+for synonyms in NOUN_SYNONYMS_LIST:
+    NOUN_SYNONYMS.update({item: synonyms for item in synonyms})
+
+
+ATTRIBUTE_SYNONYMS_LIST = [
+    ["Glasses", "Sunglasses", "Goggles"],
+    ["Sun hat", "Fedora", "Cowboy hat", "Sombrero"],
+    ["Bicycle helmet", "Football helmet"],
+    ["High heels", "Sandal", "Boot"],
+]
+
+
+ATTRIBUTE_SYNONYMS = {name: name for name in ATTRIBUTES_NAMES}
+for synonyms in ATTRIBUTE_SYNONYMS_LIST:
+    ATTRIBUTE_SYNONYMS.update({item: synonyms for item in synonyms})
+
+
+def drop_synonyms(relationships, synonyms_dict):
     filtered_rels = []
+    filtered_labels = []
     for relationship in relationships:
-        synonym_present = False
-        for synonyms in synonyms_list:
-            if synonym_present:
-                break
-            label = (
-                relationship.Label2
-                if synonyms_list == ATTRIBUTE_SYNONYMS
-                else relationship.Label1
-            )
-            if label in synonyms:
-                for other_rel in filtered_rels:
-                    label_other = (
-                        other_rel.Label2
-                        if synonyms_list == ATTRIBUTE_SYNONYMS
-                        else other_rel.Label1
-                    )
-                    if label_other in synonyms:
-                        synonym_present = True
-                        break
-        if not synonym_present:
+        label = (
+            relationship.Label2
+            if synonyms_dict == ATTRIBUTE_SYNONYMS
+            else relationship.Label1
+        )
+        if len(set(synonyms_dict[label]) & set(filtered_labels)) == 0:
             filtered_rels.append(relationship)
+            filtered_labels.append(label)
+
     return filtered_rels
 
 
@@ -570,7 +577,7 @@ def show_image_pair(
 def is_subj_attr_in_image(sample, subject, attribute):
     if sample.relationships:
         for relationship in sample.relationships.detections:
-            if relationship.Label1 == subject and relationship.Label2 == attribute:
+            if relationship.Label1 in NOUN_SYNONYMS[subject] and relationship.Label2 in ATTRIBUTE_SYNONYMS[attribute]:
                 return relationship
 
     return False
@@ -580,26 +587,21 @@ def find_other_subj_with_attr(sample, relationship_target, attribute):
     if sample.relationships:
         for relationship in sample.relationships.detections:
             if (
-                relationship.Label1 != relationship_target.Label1
-                and relationship.Label2 == attribute
+                relationship.Label1 not in NOUN_SYNONYMS[relationship_target.Label1]
+                and relationship.Label2 in ATTRIBUTE_SYNONYMS[attribute]
             ):
-                # verify that they are not synonyms:
-                if (
-                    not {relationship_target.Label1, relationship.Label1}
-                    in NOUN_SYNONYMS
+                # verify that the two subjects are not duplicate annotations
+                # (actually the (almost) the same bounding box)!
+                diffs = [
+                    abs(b1 - b2)
+                    for b1, b2 in zip(
+                        relationship.bounding_box, relationship_target.bounding_box
+                    )
+                ]
+                if not np.all(
+                    [diff < THRESHOLD_SAME_BOUNDING_BOX for diff in diffs]
                 ):
-                    # verify that the two subjects are not duplicate annotations
-                    # (actually the (almost) the same bounding box)!
-                    diffs = [
-                        abs(b1 - b2)
-                        for b1, b2 in zip(
-                            relationship.bounding_box, relationship_target.bounding_box
-                        )
-                    ]
-                    if not np.all(
-                        [diff < THRESHOLD_SAME_BOUNDING_BOX for diff in diffs]
-                    ):
-                        return relationship
+                    return relationship
 
     return None
 
@@ -614,7 +616,7 @@ def find_subj_with_other_attr(sample, subject, relationship_target):
                 # verify that they are not synonyms:
                 if (
                     not {relationship_target.Label2, relationship.Label2}
-                    in ATTRIBUTE_SYNONYMS
+                        in ATTRIBUTE_SYNONYMS_LIST
                 ):
                     # verify that the two subjects are not duplicate annotations
                     # (actually the (almost) the same bounding box)!
@@ -656,9 +658,7 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
         split="test",
         label_types=["relationships"],
         max_samples=max_samples,
-        # classes=[target_noun],
-        # dataset_name="ds_target",
-        drop_existing_dataset=True,  # We need to drop the existing data to get the new filtered data
+        # drop_existing_dataset=True,  # We need to drop the existing data to get the new filtered data
     )
 
     for target_tuple in noun_tuples:
@@ -666,9 +666,8 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
         target_noun, distractor_noun = target_tuple
 
         # Compute matching images
-        # TODO use synonym sets!
-        is_target = F("Label1") == target_noun
-        is_distractor = F("Label1") == distractor_noun
+        is_target = F("Label1").is_in(NOUN_SYNONYMS[target_noun])
+        is_distractor = F("Label1").is_in(NOUN_SYNONYMS[distractor_noun])
         matching_images = dataset.match(
             (F("relationships.detections").filter(is_target).length() > 0)
             & (F("relationships.detections").filter(is_distractor).length() > 0)
@@ -679,7 +678,7 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
                 possible_relationships = [
                     rel
                     for rel in example.relationships.detections
-                    if rel.Label1 == target_noun
+                    if rel.Label1 in NOUN_SYNONYMS[target_noun]
                 ]
                 possible_relationships = drop_synonyms(
                     possible_relationships, ATTRIBUTE_SYNONYMS
@@ -700,8 +699,8 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
 
                             # Start looking for counterexample image..
                             is_counterexample_relation = F("Label1").is_in(
-                                [distractor_noun]
-                            ) & F("Label2").is_in([target_attribute])
+                                NOUN_SYNONYMS[distractor_noun]
+                            ) & F("Label2").is_in(ATTRIBUTE_SYNONYMS[target_attribute])
                             matching_images_counterexample = matching_images.match(
                                 F("relationships.detections")
                                 .filter(is_counterexample_relation)
@@ -717,8 +716,8 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
                                     counterexample_possible_relationships = [
                                         rel
                                         for rel in counterexample.relationships.detections
-                                        if rel.Label1 == distractor_noun
-                                        and rel.Label2 == target_attribute
+                                        if rel.Label1 in NOUN_SYNONYMS[distractor_noun]
+                                        and rel.Label2 in ATTRIBUTE_SYNONYMS[target_attribute]
                                     ]
                                     counterexample_possible_relationships = drop_synonyms(
                                         counterexample_possible_relationships,
@@ -767,6 +766,7 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
         split="test",
         label_types=["relationships"],
         max_samples=max_samples,
+        # drop_existing_dataset=True,  # We need to drop the existing data to get the new filtered data
     )
 
     eval_sets = {tuple: [] for tuple in attribute_tuples}
@@ -774,73 +774,94 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
     for target_tuple in attribute_tuples:
         print("Looking for: ", target_tuple)
         target_attribute, distractor_attribute = target_tuple
-        for example in tqdm(dataset):
+
+        # Compute matching images
+        is_target = F("Label2").is_in(ATTRIBUTE_SYNONYMS[target_attribute])
+        is_distractor = F("Label2").is_in(ATTRIBUTE_SYNONYMS[distractor_attribute])
+        matching_images = dataset.match(
+            (F("relationships.detections").filter(is_target).length() > 0)
+            & (F("relationships.detections").filter(is_distractor).length() > 0)
+        )
+
+        for example in tqdm(matching_images):
             if example.relationships:
-                for relationship_target in example.relationships.detections:
+                relationships = [
+                    rel
+                    for rel in example.relationships.detections
+                    if rel.Label2 in ATTRIBUTE_SYNONYMS[target_attribute]
+                ]
+                # TODO: necessary?
+                relationships = drop_synonyms(relationships, NOUN_SYNONYMS)
 
-                    subject_attribute = relationship_target.Label2
+                for relationship_target in relationships:
+                    target_noun = relationship_target.Label1
 
-                    # TODO: check for attribute synonyms!
-                    if target_attribute == subject_attribute:
-                        target_subject = relationship_target.Label1
+                    # check that distractor IS NOT in same image:
+                    if not is_subj_attr_in_image(
+                        example, target_noun, distractor_attribute
+                    ):
 
-                        # check that distractor IS NOT in same image:
-                        if not is_subj_attr_in_image(
-                            example, target_subject, distractor_attribute
-                        ):
+                        # check that visual distractor IS in image
+                        relationship_visual_distractor = find_other_subj_with_attr(
+                            example, relationship_target, distractor_attribute
+                        )
+                        if relationship_visual_distractor:
 
-                            # check that visual distractor IS in image
-                            relationship_visual_distractor = find_other_subj_with_attr(
-                                example, relationship_target, distractor_attribute
+                            # Start looking for counterexample image..
+                            is_counterexample_relation = F("Label1").is_in(
+                                NOUN_SYNONYMS[target_noun]
+                            ) & F("Label2").is_in(ATTRIBUTE_SYNONYMS[distractor_attribute])
+                            matching_images_counterexample = matching_images.match(
+                                F("relationships.detections")
+                                .filter(is_counterexample_relation)
+                                .length()
+                                > 0
                             )
-                            if relationship_visual_distractor:
-                                # print("Found match: ", scene_graph_target.image)
 
-                                # print("Looking for counterexample image.. ")
-                                for counterexample in dataset:
+                            for counterexample in matching_images_counterexample:
+                                # check that target IS NOT in same image:
+                                if not is_subj_attr_in_image(
+                                    counterexample, target_noun, target_attribute,
+                                ):
 
-                                    # check that distractor IS in the distractor image:
-                                    counterexample_relationship_target = is_subj_attr_in_image(
-                                        counterexample,
-                                        target_subject,
-                                        distractor_attribute,
+                                    counterexample_relationships = [
+                                        rel
+                                        for rel in counterexample.relationships.detections
+                                        if rel.Label1 in NOUN_SYNONYMS[target_noun]
+                                        and rel.Label2 in ATTRIBUTE_SYNONYMS[distractor_attribute]
+                                    ]
+                                    # TODO: necessary?
+                                    counterexample_relationships = drop_synonyms(
+                                        counterexample_relationships, NOUN_SYNONYMS,
                                     )
-                                    if counterexample_relationship_target:
-                                        # TODO: distractor subject == target subject?!
 
-                                        # check that target IS NOT in same image:
-                                        if not is_subj_attr_in_image(
+                                    for (
+                                        counterexample_rel_target
+                                    ) in counterexample_relationships:
+                                        # check that visual distractor IS in image
+                                        counterexample_relationship_visual_distractor = find_other_subj_with_attr(
                                             counterexample,
-                                            target_subject,
+                                            counterexample_rel_target,
                                             target_attribute,
-                                        ):
+                                        )
+                                        # TODO: enforce that distractor subjects are the same?
+                                        if counterexample_relationship_visual_distractor:  # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
+                                            sample = {
+                                                "img_example": example.filepath,
+                                                "img_counterexample": counterexample.filepath,
+                                                "relationship_target": relationship_target,
+                                                "relationship_visual_distractor": relationship_visual_distractor,
+                                                "counterexample_relationship_target": counterexample_rel_target,
+                                                "counterexample_relationship_visual_distractor": counterexample_relationship_visual_distractor,
+                                            }
+                                            if not sample_exists_in_eval_set(
+                                                sample, eval_sets[target_tuple]
+                                            ):
+                                                # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
+                                                # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_rel_target, counterexample_relationship_visual_distractor])
 
-                                            # check that visual distractor IS in image
-                                            counterexample_relationship_visual_distractor = find_other_subj_with_attr(
-                                                counterexample,
-                                                counterexample_relationship_target,
-                                                target_attribute,
-                                            )
-                                            # TODO: enforce that distractor subjects are the same?
-                                            if counterexample_relationship_visual_distractor:  # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
-                                                sample = {
-                                                    "img_example": example.filepath,
-                                                    "img_counterexample": counterexample.filepath,
-                                                    "relationship_target": relationship_target,
-                                                    "relationship_visual_distractor": relationship_visual_distractor,
-                                                    "counterexample_relationship_target": counterexample_relationship_target,
-                                                    "counterexample_relationship_visual_distractor": counterexample_relationship_visual_distractor,
-                                                }
-                                                if not sample_exists_in_eval_set(
-                                                    sample, eval_sets[target_tuple]
-                                                ):
-                                                    # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
-                                                    # show_image_pair(sample_target.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
-
-                                                    # Add tuple of example and counter-example
-                                                    eval_sets[target_tuple].append(
-                                                        sample
-                                                    )
+                                                # Add tuple of example and counter-example
+                                                eval_sets[target_tuple].append(sample)
 
         print("saving intermediate results..")
         pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
@@ -858,7 +879,7 @@ def parse_args():
         choices=["noun_tuples", "attribute_tuples"],
     )
     argparser.add_argument(
-        "--max-samples", type=int, default=10000,
+        "--max-samples", type=int, default=None,
     )
 
     args = argparser.parse_args()
