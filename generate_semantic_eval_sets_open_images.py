@@ -1,3 +1,4 @@
+import argparse
 import pickle
 
 import fiftyone.zoo as foz
@@ -771,21 +772,42 @@ def generate_eval_set_from_attribute_tuples(dataset, attribute_tuples, max_sampl
     return eval_sets
 
 
+def parse_args():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument(
+        "--eval-set",
+        type=str,
+        required=True,
+        choices=["noun_tuples", "attribute_tuples"],
+    )
+    argparser.add_argument(
+        "--max-samples",
+        type=int,
+        default=10000,
+    )
+
+    args = argparser.parse_args()
+
+    return args
+
+
 if __name__ == "__main__":
-    max_samples = 100
+    args = parse_args()
+
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
         split="test",
         label_types=["relationships"],
-        max_samples=max_samples,
+        max_samples=args.max_samples,
     )
+    if args.eval_set == "noun_tuples":
+        eval_sets_based_on_nouns = generate_eval_set_from_noun_tuples(
+            dataset, NOUN_TUPLES, args.max_samples
+        )
+        pickle.dump(eval_sets_based_on_nouns, open(f"data/noun-{args.max_samples}.p", "wb"))
 
-    eval_sets_based_on_nouns = generate_eval_set_from_noun_tuples(
-        dataset, NOUN_TUPLES, max_samples
-    )
-    pickle.dump(eval_sets_based_on_nouns, open(f"data/noun-{max_samples}.p", "wb"))
-
-    # eval_sets = generate_eval_set_from_attribute_tuples(
-    #     dataset, ATTRIBUTE_TUPLES, max_samples
-    # )
-    # pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
+    elif args.eval_set == "attribute_tuples":
+        eval_sets = generate_eval_set_from_attribute_tuples(
+            dataset, ATTRIBUTE_TUPLES, args.max_samples
+        )
+        pickle.dump(eval_sets, open(f"data/attribute-{args.max_samples}.p", "wb"))
