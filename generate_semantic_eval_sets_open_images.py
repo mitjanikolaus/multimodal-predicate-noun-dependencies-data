@@ -8,35 +8,70 @@ from PIL import Image as PIL_Image
 from matplotlib.patches import Rectangle
 from tqdm import tqdm
 
-THRESHOLD_SAME_BOUNDING_BOX = 0.01
+from utils import get_tuples_no_duplicates
+
+THRESHOLD_SAME_BOUNDING_BOX = 0.02
 
 NOUN_SYNONYMS = [{"Table", "Desk"}, {"Table", "Coffee table"}]
 ATTRIBUTE_SYNONYMS = []
 
+####ATTRIBUTES (Label2)
+OBJECTS = ["Houseplant", "Coffee", "Tea", "Cake"]
+OBJECTS_TUPLES = get_tuples_no_duplicates(OBJECTS)
 
-ATTRIBUTE_TUPLES = [
-    ("Wooden", "Plastic"),
-    ("Wooden", "Transparent"),
-    ("Wooden", "(made of)Leather"),
-    ("Wooden", "(made of)Textile"),
+SHOES = ["High heels", "Sandal", "Boot"]
+SHOES_TUPLES = get_tuples_no_duplicates(SHOES)
+
+HATS = ["Sun hat", "Fedora", "Bicycle helmet", "Cowboy hat", "Football helmet"]
+HATS_TUPLES = get_tuples_no_duplicates(HATS)
+
+TEXTURES = ["Wooden", "Plastic", "Transparent", "(made of)Leather", "(made of)Textile"]
+TEXTURES_TUPLES = get_tuples_no_duplicates(TEXTURES)
+
+INSTRUMENTS = [
+    "French horn",
+    "Piano",
+    "Saxophone",
+    "Guitar",
+    "Violin",
+    "Trumpet",
+    "Accordion",
+    "Microphone",
+    "Sing",
+    "Cello",
+    "Trombone",
+    "Harp",
+    "Flute",
+    "Drum",
+    "Musical keyboard",
+]
+INSTRUMENTS_TUPLES = get_tuples_no_duplicates(INSTRUMENTS)
+
+ANIMALS = ["Dog", "Cat", "Horse", "Elephant"]
+ANIMALS_TUPLES = get_tuples_no_duplicates(ANIMALS)
+
+VEHICLES = [
+    "Car",
+    "Motorcycle",
+    "Bicycle",
+    "Horse",
+    "Roller skates",
+    "Skateboard",
+    "Cart",
+    "Bus",
+    "Wheelchair",
+]
+VEHICLES_TUPLES = get_tuples_no_duplicates(VEHICLES)
+
+FURNITURE = ["Table", "Chair", "Wheelchair"]
+FURNITURE_TUPLES = get_tuples_no_duplicates(FURNITURE)
+
+ATTRIBUTE_TUPLES_OTHER = [
+    ("Glasses", "Sunglasses"),
+    ("Glasses", "Goggles"),
+    ("Goggles", "Sunglasses"),
     ("Smile", "Cry"),
-    ("Tree", "Table"),
-    ("Plastic", "(made of)Leather"),
-    ("Plastic", "(made of)Textile"),
-    ("(made of)Leather", "(made of)Textile"),
-    ("Car", "Horse"),
-    ("Car", "Motorcycle"),
-    ("Car", "Bicycle"),
-    ("Motorcycle", "Bicycle"),
-    ("Horse", "Bicycle"),
-    ("Table", "Chair"),
     ("Table", "Tree"),
-    ("Dog", "Cat"),
-    ("Stand", "Sit"),
-    ("Stand", "Walk"),
-    ("Stand", "Run"),
-    ("Stand", "Lay"),
-    ("Stand", "Jump"),
     ("Sit", "Walk"),
     ("Sit", "Run"),
     ("Sit", "Lay"),
@@ -47,22 +82,67 @@ ATTRIBUTE_TUPLES = [
     ("Run", "Jump"),
     ("Run", "Lay"),
     ("Lay", "Jump"),
-    ("Glasses", "Sunglasses"),
+    ("Stand", "Run"),
+    ("Stand", "Lay"),
+    ("Stand", "Jump"),
+    ("Stand", "Sit"),
+    ("Stand", "Walk"),
 ]
 
-NOUNS_TUPLES = [
+ATTRIBUTE_TUPLES = (
+    INSTRUMENTS_TUPLES
+    + ANIMALS_TUPLES
+    + VEHICLES_TUPLES
+    + FURNITURE_TUPLES
+    + TEXTURES_TUPLES
+    + OBJECTS_TUPLES
+    + SHOES_TUPLES
+    + HATS_TUPLES
+    + ATTRIBUTE_TUPLES_OTHER
+)
+
+### Nouns (Label1)
+NOUNS_OBJECTS = ["Coffee cup", "Wine glass", "Mug", "Bottle", "Flowerpot", "Chopsticks"]
+NOUNS_OBJECTS_TUPLES = get_tuples_no_duplicates(NOUNS_OBJECTS)
+
+NOUNS_FRUITS = [
+    "Orange",
+    "Grapefruit",
+    "Strawberry",
+    "Lemon",
+    "Grape",
+    "Peach",
+    "Apple",
+    "Pear",
+    "Coconut",
+]
+NOUNS_FRUITS_TUPLES = get_tuples_no_duplicates(NOUNS_FRUITS)
+
+NOUNS_ACCESSORIES = ["Handbag", "Backpack", "Suitcase"]
+NOUNS_ACCESSORIES_TUPLES = get_tuples_no_duplicates(NOUNS_ACCESSORIES)
+
+NOUNS_FURNITURE = ["Chair", "Table", "Sofa bed"]
+NOUNS_FURNITURE_TUPLES = get_tuples_no_duplicates(NOUNS_FURNITURE)
+
+NOUNS_INSTRUMENTS = ["Piano", "Guitar", "Drum", "Violin"]
+NOUNS_INSTRUMENTS_TUPLES = get_tuples_no_duplicates(NOUNS_INSTRUMENTS)
+
+NOUNS_TUPLES_OTHER = [
+    ("Desk", "Chair"),
     ("Man", "Boy"),
     ("Man", "Woman"),
     ("Woman", "Girl"),
-    ("Table", "Chair"),
-    ("Desk", "Chair"),
-    ("Bottle", "Coffee cup"),
-    ("Bottle", "Flowerpot"),
-    ("Coffee cup", "Flowerpot"),
-    ("Coffee cup", "Wine glass"),
-    ("Piano", "Guitar"),
-    ("Backpack", "Suitcase"),
 ]
+
+NOUN_TUPLES = (
+    NOUNS_OBJECTS_TUPLES
+    + NOUNS_FRUITS_TUPLES
+    + NOUNS_ACCESSORIES_TUPLES
+    + NOUNS_FURNITURE_TUPLES
+    + NOUNS_INSTRUMENTS_TUPLES
+    + NOUNS_TUPLES_OTHER
+)
+
 nouns_counter = [
     ("Man", 31890),
     ("Woman", 19579),
@@ -365,13 +445,13 @@ attributes_counter = [
 ]
 attributes_names = [name for name, _ in attributes_counter]
 
-for attr1, attr2 in ATTRIBUTE_TUPLES:
-    assert attr1 in attributes_names
-    assert attr2 in attributes_names
+for attr1, attr2 in ATTRIBUTE_TUPLES_OTHER:
+    assert attr1 in attributes_names, f"{attr1} is misspelled"
+    assert attr2 in attributes_names, f"{attr2} is misspelled"
 
-for noun1, noun2 in NOUNS_TUPLES:
-    assert noun1 in nouns_names
-    assert noun2 in nouns_names
+for noun1, noun2 in NOUN_TUPLES:
+    assert noun1 in nouns_names, f"{noun1} is misspelled"
+    assert noun2 in nouns_names, f"{noun2} is misspelled"
 
 
 def show_image_pair(
@@ -514,7 +594,9 @@ def find_subj_with_other_attr(sample, subject, relationship_target):
     return None
 
 
-def generate_eval_set_attribute_noun_dependencies_nouns(dataset, noun_tuples):
+def generate_eval_set_attribute_noun_dependencies_nouns(
+    dataset, noun_tuples, max_samples
+):
     eval_sets = {tuple: [] for tuple in noun_tuples}
 
     for target_tuple in noun_tuples:
@@ -583,12 +665,16 @@ def generate_eval_set_attribute_noun_dependencies_nouns(dataset, noun_tuples):
                                                     }
                                                 )
 
-        print(f"Found {len(eval_sets[target_tuple])} examples for {target_tuple}.\n\n")
+        print("saving intermediate results..")
+        pickle.dump(eval_sets, open(f"data/noun-{max_samples}.p", "wb"))
+        print(f"\nFound {len(eval_sets[target_tuple])} examples for {target_tuple}.\n")
 
     return eval_sets
 
 
-def generate_eval_set_attribute_noun_dependencies(dataset, attribute_tuples):
+def generate_eval_set_attribute_noun_dependencies(
+    dataset, attribute_tuples, max_samples
+):
     eval_sets = {tuple: [] for tuple in attribute_tuples}
 
     for target_tuple in attribute_tuples:
@@ -658,13 +744,15 @@ def generate_eval_set_attribute_noun_dependencies(dataset, attribute_tuples):
                                                     }
                                                 )
 
+        print("saving intermediate results..")
+        pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
         print(f"Found {len(eval_sets[target_tuple])} examples for {target_tuple}.\n\n")
 
     return eval_sets
 
 
 if __name__ == "__main__":
-    max_samples = 1000
+    max_samples = 10000
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
         split="test",
@@ -672,21 +760,12 @@ if __name__ == "__main__":
         max_samples=max_samples,
     )
 
-    # eval_sets_based_on_nouns = generate_eval_set_attribute_noun_dependencies_nouns(
-    #     dataset, NOUNS_TUPLES
-    # )
+    eval_sets_based_on_nouns = generate_eval_set_attribute_noun_dependencies_nouns(
+        dataset, NOUN_TUPLES, max_samples
+    )
+
+    pickle.dump(eval_sets_based_on_nouns, open(f"data/noun-{max_samples}.p", "wb"))
+
+    # eval_sets = generate_eval_set_attribute_noun_dependencies(dataset, ATTRIBUTE_TUPLES, max_samples)
     #
-    # pickle.dump(eval_sets_based_on_nouns, open(f"data/noun-{max_samples}.p", "wb"))
-
-    eval_sets = generate_eval_set_attribute_noun_dependencies(dataset, ATTRIBUTE_TUPLES)
-
-    pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
-
-    # eval_sets = pickle.load(open("data/attribute_noun.p", "rb"))
-    #
-    # for tuple, eval_set in eval_sets.items():
-    #     if len(eval_set) > 0:
-    #         print(f"{tuple} ({len(eval_set)} examples)")
-    #         for example, counterexample in eval_set:
-    #             show_image_pair(example["img_target"], example["img_distractor"], [example["relationship_target"], example["relationship_visual_distractor"]],
-    #                             [counterexample["relationship_target"], counterexample["relationship_visual_distractor"]])
+    # pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
