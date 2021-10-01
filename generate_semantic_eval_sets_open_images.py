@@ -594,9 +594,23 @@ def find_subj_with_other_attr(sample, subject, relationship_target):
     return None
 
 
-def generate_eval_set_attribute_noun_dependencies_nouns(
-    dataset, noun_tuples, max_samples
-):
+def sample_exists_in_eval_set(sample, eval_set):
+    for existing_sample in eval_set:
+        if (
+            existing_sample["img_example"] == sample["img_example"]
+            and existing_sample["img_counterexample"] == sample["img_counterexample"]
+        ):
+            if (
+                existing_sample["relationship_target"].Label1
+                == sample["relationship_target"].Label1
+                and existing_sample["relationship_target"].Label2
+                == sample["relationship_target"].Label2
+            ):
+                return True
+    return False
+
+
+def generate_eval_set_from_noun_tuples(dataset, noun_tuples, max_samples):
     eval_sets = {tuple: [] for tuple in noun_tuples}
 
     for target_tuple in noun_tuples:
@@ -650,20 +664,24 @@ def generate_eval_set_attribute_noun_dependencies_nouns(
                                             )
                                             # TODO: enforce that distractor subjects are the same?
                                             if counterexample_relationship_visual_distractor:  # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
-                                                # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
-                                                # show_image_pair(sample_target.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
+                                                sample = {
+                                                    "img_example": sample_target.filepath,
+                                                    "img_counterexample": counterexample.filepath,
+                                                    "relationship_target": relationship_target,
+                                                    "relationship_visual_distractor": relationship_visual_distractor,
+                                                    "counterexample_relationship_target": counterexample_relationship_target,
+                                                    "counterexample_relationship_visual_distractor": counterexample_relationship_visual_distractor,
+                                                }
+                                                if not sample_exists_in_eval_set(
+                                                    sample, eval_sets[target_tuple]
+                                                ):
+                                                    # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
+                                                    # show_image_pair(sample_target.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
 
-                                                # Add example and counter-example
-                                                eval_sets[target_tuple].append(
-                                                    {
-                                                        "img_example": sample_target.filepath,
-                                                        "img_counterexample": counterexample.filepath,
-                                                        "relationship_target": relationship_target,
-                                                        "relationship_visual_distractor": relationship_visual_distractor,
-                                                        "counterexample_relationship_target": counterexample_relationship_target,
-                                                        "counterexample_relationship_visual_distractor": counterexample_relationship_visual_distractor,
-                                                    }
-                                                )
+                                                    # Add example and counter-example
+                                                    eval_sets[target_tuple].append(
+                                                        sample
+                                                    )
 
         print("saving intermediate results..")
         pickle.dump(eval_sets, open(f"data/noun-{max_samples}.p", "wb"))
@@ -672,9 +690,7 @@ def generate_eval_set_attribute_noun_dependencies_nouns(
     return eval_sets
 
 
-def generate_eval_set_attribute_noun_dependencies(
-    dataset, attribute_tuples, max_samples
-):
+def generate_eval_set_from_attribute_tuples(dataset, attribute_tuples, max_samples):
     eval_sets = {tuple: [] for tuple in attribute_tuples}
 
     for target_tuple in attribute_tuples:
@@ -729,20 +745,24 @@ def generate_eval_set_attribute_noun_dependencies(
                                             )
                                             # TODO: enforce that distractor subjects are the same?
                                             if counterexample_relationship_visual_distractor:  # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
-                                                # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
-                                                # show_image_pair(sample_target.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
+                                                sample = {
+                                                    "img_example": sample_target.filepath,
+                                                    "img_counterexample": counterexample.filepath,
+                                                    "relationship_target": relationship_target,
+                                                    "relationship_visual_distractor": relationship_visual_distractor,
+                                                    "counterexample_relationship_target": counterexample_relationship_target,
+                                                    "counterexample_relationship_visual_distractor": counterexample_relationship_visual_distractor,
+                                                }
+                                                if not sample_exists_in_eval_set(
+                                                    sample, eval_sets[target_tuple]
+                                                ):
+                                                    # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
+                                                    # show_image_pair(sample_target.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
 
-                                                # Add tuple of example and counter-example
-                                                eval_sets[target_tuple].append(
-                                                    {
-                                                        "img_example": sample_target.filepath,
-                                                        "img_counterexample": counterexample.filepath,
-                                                        "relationship_target": relationship_target,
-                                                        "relationship_visual_distractor": relationship_visual_distractor,
-                                                        "counterexample_relationship_target": counterexample_relationship_target,
-                                                        "counterexample_relationship_visual_distractor": counterexample_relationship_visual_distractor,
-                                                    }
-                                                )
+                                                    # Add tuple of example and counter-example
+                                                    eval_sets[target_tuple].append(
+                                                        sample
+                                                    )
 
         print("saving intermediate results..")
         pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
@@ -752,7 +772,7 @@ def generate_eval_set_attribute_noun_dependencies(
 
 
 if __name__ == "__main__":
-    max_samples = 10000
+    max_samples = 100
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
         split="test",
@@ -760,12 +780,12 @@ if __name__ == "__main__":
         max_samples=max_samples,
     )
 
-    eval_sets_based_on_nouns = generate_eval_set_attribute_noun_dependencies_nouns(
+    eval_sets_based_on_nouns = generate_eval_set_from_noun_tuples(
         dataset, NOUN_TUPLES, max_samples
     )
-
     pickle.dump(eval_sets_based_on_nouns, open(f"data/noun-{max_samples}.p", "wb"))
 
-    # eval_sets = generate_eval_set_attribute_noun_dependencies(dataset, ATTRIBUTE_TUPLES, max_samples)
-    #
+    # eval_sets = generate_eval_set_from_attribute_tuples(
+    #     dataset, ATTRIBUTE_TUPLES, max_samples
+    # )
     # pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
