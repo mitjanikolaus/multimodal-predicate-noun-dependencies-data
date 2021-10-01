@@ -1,6 +1,7 @@
 import argparse
 import pickle
 
+import fiftyone
 import fiftyone.zoo as foz
 import numpy as np
 
@@ -13,7 +14,12 @@ from utils import get_tuples_no_duplicates
 
 THRESHOLD_SAME_BOUNDING_BOX = 0.02
 
-NOUN_SYNONYMS = [{"Table", "Desk"}, {"Table", "Coffee table"}]
+NOUN_SYNONYMS = [
+    ["Man", "Boy"],
+    ["Woman", "Girl"],
+    ["Table", "Desk"],
+    ["Table", "Coffee table"],
+]
 ATTRIBUTE_SYNONYMS = []
 
 ####ATTRIBUTES (Label2)
@@ -130,9 +136,7 @@ NOUNS_INSTRUMENTS_TUPLES = get_tuples_no_duplicates(NOUNS_INSTRUMENTS)
 
 NOUNS_TUPLES_OTHER = [
     ("Desk", "Chair"),
-    ("Man", "Boy"),
     ("Man", "Woman"),
-    ("Woman", "Girl"),
 ]
 
 NOUN_TUPLES = (
@@ -455,8 +459,30 @@ for noun1, noun2 in NOUN_TUPLES:
     assert noun2 in nouns_names, f"{noun2} is misspelled"
 
 
+def drop_noun_synonyms(nouns):
+    filtered_nouns = []
+    for noun in nouns:
+        synonym_present = False
+        synonym_set_first_element = noun
+        for synonyms in NOUN_SYNONYMS:
+            if synonym_present:
+                break
+            if noun in synonyms:
+                synonym_set_first_element = synonyms[0]
+                for other_noun in filtered_nouns:
+                    if other_noun in synonyms:
+                        synonym_present = True
+                        break
+        if not synonym_present:
+            filtered_nouns.append(synonym_set_first_element)
+    return filtered_nouns
+
+
 def show_image_pair(
-    image_1_path, image_2_path, regions_and_attributes_1, regions_and_attributes_2
+    image_1_path,
+    image_2_path,
+    regions_and_attributes_1=None,
+    regions_and_attributes_2=None,
 ):
     fig = plt.gcf()
     fig.set_size_inches(18.5, 10.5)
@@ -483,48 +509,51 @@ def show_image_pair(
     image = np.column_stack((img_1_data_adjusted, img_2_data_adjusted))
 
     plt.imshow(image)
-    ax = plt.gca()
-    colors = ["green", "red"]
-    for relationship, color in zip(regions_and_attributes_1, colors):
-        bb = relationship.bounding_box
-        ax.add_patch(
-            Rectangle(
-                (bb[0] * img_1_data.width, bb[1] * img_1_data.height),
-                bb[2] * img_1_data.width,
-                bb[3] * img_1_data.height,
-                fill=False,
-                edgecolor=color,
-                linewidth=3,
-            )
-        )
-        ax.text(
-            bb[0] * img_1_data.width,
-            bb[1] * img_1_data.height,
-            relationship.Label1 + f" ({relationship.Label2})",
-            style="italic",
-            bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
-        )
 
-    x_offset = img_1_data.width
-    for relationship, color in zip(regions_and_attributes_2, colors):
-        bb = relationship.bounding_box
-        ax.add_patch(
-            Rectangle(
-                (bb[0] * img_2_data.width + x_offset, bb[1] * img_2_data.height),
-                bb[2] * img_2_data.width,
-                bb[3] * img_2_data.height,
-                fill=False,
-                edgecolor=color,
-                linewidth=3,
+    colors = ["green", "red"]
+    ax = plt.gca()
+    if regions_and_attributes_1:
+        for relationship, color in zip(regions_and_attributes_1, colors):
+            bb = relationship.bounding_box
+            ax.add_patch(
+                Rectangle(
+                    (bb[0] * img_1_data.width, bb[1] * img_1_data.height),
+                    bb[2] * img_1_data.width,
+                    bb[3] * img_1_data.height,
+                    fill=False,
+                    edgecolor=color,
+                    linewidth=3,
+                )
             )
-        )
-        ax.text(
-            bb[0] * img_2_data.width + x_offset,
-            bb[1] * img_2_data.height,
-            relationship.Label1 + f" ({relationship.Label2})",
-            style="italic",
-            bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
-        )
+            ax.text(
+                bb[0] * img_1_data.width,
+                bb[1] * img_1_data.height,
+                relationship.Label1 + f" ({relationship.Label2})",
+                style="italic",
+                bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
+            )
+
+    if regions_and_attributes_2:
+        x_offset = img_1_data.width
+        for relationship, color in zip(regions_and_attributes_2, colors):
+            bb = relationship.bounding_box
+            ax.add_patch(
+                Rectangle(
+                    (bb[0] * img_2_data.width + x_offset, bb[1] * img_2_data.height),
+                    bb[2] * img_2_data.width,
+                    bb[3] * img_2_data.height,
+                    fill=False,
+                    edgecolor=color,
+                    linewidth=3,
+                )
+            )
+            ax.text(
+                bb[0] * img_2_data.width + x_offset,
+                bb[1] * img_2_data.height,
+                relationship.Label1 + f" ({relationship.Label2})",
+                style="italic",
+                bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
+            )
 
     plt.tick_params(labelbottom="off", labelleft="off")
     plt.show()
@@ -611,15 +640,21 @@ def sample_exists_in_eval_set(sample, eval_set):
     return False
 
 
-def generate_eval_set_from_noun_tuples(dataset, noun_tuples, max_samples):
+def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
+    dataset = foz.load_zoo_dataset(
+        "open-images-v6",
+        split="test",
+        label_types=["relationships"],
+        max_samples=args.max_samples,
+    )
     eval_sets = {tuple: [] for tuple in noun_tuples}
 
     for target_tuple in noun_tuples:
         print("Looking for: ", target_tuple)
         target_noun, distractor_noun = target_tuple
-        for sample_target in tqdm(dataset):
-            if sample_target.relationships:
-                for relationship_target in sample_target.relationships.detections:
+        for example in tqdm(dataset):
+            if example.relationships:
+                for relationship_target in example.relationships.detections:
 
                     target_subject = relationship_target.Label1
 
@@ -629,11 +664,11 @@ def generate_eval_set_from_noun_tuples(dataset, noun_tuples, max_samples):
 
                         # check that distractor IS NOT in same image:
                         if not is_subj_attr_in_image(
-                            sample_target, distractor_noun, target_attribute
+                            example, distractor_noun, target_attribute
                         ):
                             # check that visual distractor IS in image
                             relationship_visual_distractor = find_subj_with_other_attr(
-                                sample_target, distractor_noun, relationship_target
+                                example, distractor_noun, relationship_target
                             )
                             if relationship_visual_distractor:
                                 # print("Found match: ", sample_target.image)
@@ -666,7 +701,7 @@ def generate_eval_set_from_noun_tuples(dataset, noun_tuples, max_samples):
                                             # TODO: enforce that distractor subjects are the same?
                                             if counterexample_relationship_visual_distractor:  # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
                                                 sample = {
-                                                    "img_example": sample_target.filepath,
+                                                    "img_example": example.filepath,
                                                     "img_counterexample": counterexample.filepath,
                                                     "relationship_target": relationship_target,
                                                     "relationship_visual_distractor": relationship_visual_distractor,
@@ -691,15 +726,22 @@ def generate_eval_set_from_noun_tuples(dataset, noun_tuples, max_samples):
     return eval_sets
 
 
-def generate_eval_set_from_attribute_tuples(dataset, attribute_tuples, max_samples):
+def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
+    dataset = foz.load_zoo_dataset(
+        "open-images-v6",
+        split="test",
+        label_types=["relationships"],
+        max_samples=args.max_samples,
+    )
+
     eval_sets = {tuple: [] for tuple in attribute_tuples}
 
     for target_tuple in attribute_tuples:
         print("Looking for: ", target_tuple)
         target_attribute, distractor_attribute = target_tuple
-        for sample_target in tqdm(dataset):
-            if sample_target.relationships:
-                for relationship_target in sample_target.relationships.detections:
+        for example in tqdm(dataset):
+            if example.relationships:
+                for relationship_target in example.relationships.detections:
 
                     subject_attribute = relationship_target.Label2
 
@@ -709,12 +751,12 @@ def generate_eval_set_from_attribute_tuples(dataset, attribute_tuples, max_sampl
 
                         # check that distractor IS NOT in same image:
                         if not is_subj_attr_in_image(
-                            sample_target, target_subject, distractor_attribute
+                            example, target_subject, distractor_attribute
                         ):
 
                             # check that visual distractor IS in image
                             relationship_visual_distractor = find_other_subj_with_attr(
-                                sample_target, relationship_target, distractor_attribute
+                                example, relationship_target, distractor_attribute
                             )
                             if relationship_visual_distractor:
                                 # print("Found match: ", scene_graph_target.image)
@@ -747,7 +789,7 @@ def generate_eval_set_from_attribute_tuples(dataset, attribute_tuples, max_sampl
                                             # TODO: enforce that distractor subjects are the same?
                                             if counterexample_relationship_visual_distractor:  # and distractor_visual_distractor_subject.synsets[0].name == visual_distractor_subject.synsets[0].name:
                                                 sample = {
-                                                    "img_example": sample_target.filepath,
+                                                    "img_example": example.filepath,
                                                     "img_counterexample": counterexample.filepath,
                                                     "relationship_target": relationship_target,
                                                     "relationship_visual_distractor": relationship_visual_distractor,
@@ -772,6 +814,9 @@ def generate_eval_set_from_attribute_tuples(dataset, attribute_tuples, max_sampl
     return eval_sets
 
 
+ACCESSORIES = ["Glasses", "Sunglasses", "Goggles"]
+
+
 def parse_args():
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
@@ -781,9 +826,7 @@ def parse_args():
         choices=["noun_tuples", "attribute_tuples"],
     )
     argparser.add_argument(
-        "--max-samples",
-        type=int,
-        default=10000,
+        "--max-samples", type=int, default=10000,
     )
 
     args = argparser.parse_args()
@@ -794,20 +837,16 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    dataset = foz.load_zoo_dataset(
-        "open-images-v6",
-        split="test",
-        label_types=["relationships"],
-        max_samples=args.max_samples,
-    )
     if args.eval_set == "noun_tuples":
-        eval_sets_based_on_nouns = generate_eval_set_from_noun_tuples(
-            dataset, NOUN_TUPLES, args.max_samples
+        eval_sets_based_on_nouns = generate_eval_sets_from_noun_tuples(
+            NOUN_TUPLES, args.max_samples
         )
-        pickle.dump(eval_sets_based_on_nouns, open(f"data/noun-{args.max_samples}.p", "wb"))
+        pickle.dump(
+            eval_sets_based_on_nouns, open(f"data/noun-{args.max_samples}.p", "wb")
+        )
 
     elif args.eval_set == "attribute_tuples":
-        eval_sets = generate_eval_set_from_attribute_tuples(
-            dataset, ATTRIBUTE_TUPLES, args.max_samples
+        eval_sets = generate_eval_sets_from_attribute_tuples(
+            ATTRIBUTE_TUPLES, args.max_samples
         )
         pickle.dump(eval_sets, open(f"data/attribute-{args.max_samples}.p", "wb"))
