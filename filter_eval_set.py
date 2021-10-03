@@ -63,6 +63,9 @@ class EvalSetFilter(QWidget):
         self.text_example_distractor = QLabel(self)
         self.text_example_distractor.setFixedHeight(15)
         grid.addWidget(self.text_example_distractor, 3, 0)
+        self.text_example_filepath = QLabel(self)
+        self.text_example_filepath.setFixedHeight(15)
+        grid.addWidget(self.text_example_filepath, 4, 0)
 
         self.text_counterexample_target = QLabel(self)
         self.text_counterexample_target.setFixedHeight(15)
@@ -70,34 +73,45 @@ class EvalSetFilter(QWidget):
         self.text_counterexample_distractor = QLabel(self)
         self.text_counterexample_distractor.setFixedHeight(15)
         grid.addWidget(self.text_counterexample_distractor, 3, 1)
+        self.text_counterexample_filepath = QLabel(self)
+        self.text_counterexample_filepath.setFixedHeight(15)
+        grid.addWidget(self.text_counterexample_filepath, 4, 1)
 
         self.plot_sample(self.sample)
         self.pic_example.show()
         self.pic_counter_example.show()
         self.text_example_target.show()
         self.text_example_distractor.show()
+        self.text_example_filepath.show()
         self.text_counterexample_target.show()
         self.text_counterexample_distractor.show()
+        self.text_counterexample_filepath.show()
 
         button_accept = QPushButton("accept (ctrl+a)")
         button_accept.clicked.connect(self.accept)
-        grid.addWidget(button_accept, 4, 0)
+        grid.addWidget(button_accept, 5, 0)
         shortcut_accept = QShortcut(QKeySequence("Ctrl+A"), self)
         shortcut_accept.activated.connect(self.accept)
 
         button_reject = QPushButton("reject (ctrl+r)")
         button_reject.clicked.connect(self.reject)
-        grid.addWidget(button_reject, 4, 1)
+        grid.addWidget(button_reject, 5, 1)
         shortcut_reject = QShortcut(QKeySequence("Ctrl+R"), self)
         shortcut_reject.activated.connect(self.reject)
 
+        button_reject_example = QPushButton("reject example (ctrl+e)")
+        button_reject_example.clicked.connect(self.reject_example)
+        grid.addWidget(button_reject_example, 6, 0)
+        shortcut_reject = QShortcut(QKeySequence("Ctrl+E"), self)
+        shortcut_reject.activated.connect(self.reject_example)
+
         button_next_eval_set = QPushButton("Go to next eval set")
         button_next_eval_set.clicked.connect(self.goto_next_eval_set)
-        grid.addWidget(button_next_eval_set, 5, 0, 1, 2)
+        grid.addWidget(button_next_eval_set, 7, 0, 1, 2)
 
         button_save = QPushButton("Save filtered results")
         button_save.clicked.connect(self.save)
-        grid.addWidget(button_save, 6, 0, 1, 2)
+        grid.addWidget(button_save, 8, 0, 1, 2)
 
         self.setWindowTitle("Filter eval set")
         self.show()
@@ -123,8 +137,11 @@ class EvalSetFilter(QWidget):
 
         self.text_example_target.setText(text_target)
         self.text_example_distractor.setText(text_distractor)
+        self.text_example_filepath.setText(self.sample['img_example'])
+
         self.text_counterexample_target.setText(text_distractor)
         self.text_counterexample_distractor.setText(text_target)
+        self.text_counterexample_filepath.setText(self.sample['img_counterexample'])
 
         for img in [sample["img_example"], sample["img_counterexample"]]:
             pixmap = QtGui.QPixmap(img)
@@ -168,6 +185,13 @@ class EvalSetFilter(QWidget):
                 self.pic_counter_example.setPixmap(pixmap)
             else:
                 self.pic_example.setPixmap(pixmap)
+
+    def reject_example(self):
+        current_example = self.sample['img_example']
+        while current_example == self.sample['img_example']:
+            self.sample = self.get_next_sample()
+
+        self.plot_sample(self.sample)
 
     def get_next_sample(self):
         self.sample_index += 1
