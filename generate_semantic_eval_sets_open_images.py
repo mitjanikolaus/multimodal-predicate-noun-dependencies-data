@@ -19,17 +19,6 @@ THRESHOLD_SAME_BOUNDING_BOX = 0.02
 OBJECTS = ["Houseplant", "Coffee", "Tea", "Cake"]
 OBJECTS_TUPLES = get_tuples_no_duplicates(OBJECTS)
 
-# SHOES = ["High heels", "Sandal", "Boot"]
-# SHOES_TUPLES = get_tuples_no_duplicates(SHOES)
-
-# TODO: add emotional states?
-ACCESSORIES = ["Glasses", "Sun hat", "Bicycle helmet", "High heels", "Necklace", "Scarf", "Swim cap", "Handbag"]
-ACCESSORIES_TUPLES = get_tuples_no_duplicates(ACCESSORIES)
-
-
-# HATS = ["Sun hat", "Fedora", "Bicycle helmet", "Cowboy hat", "Football helmet"]
-# HATS_TUPLES = get_tuples_no_duplicates(HATS)
-
 TEXTURES = ["Wooden", "Plastic", "Transparent", "(made of)Leather", "(made of)Textile"]
 TEXTURES_TUPLES = get_tuples_no_duplicates(TEXTURES)
 
@@ -42,7 +31,6 @@ INSTRUMENTS = [
     "Trumpet",
     "Accordion",
     "Microphone",
-    "Sing",
     "Cello",
     "Trombone",
     "Harp",
@@ -50,10 +38,6 @@ INSTRUMENTS = [
     "Drum",
     "Musical keyboard",
 ]
-INSTRUMENTS_TUPLES = get_tuples_no_duplicates(INSTRUMENTS)
-
-ANIMALS = ["Dog", "Cat", "Horse", "Elephant"]
-ANIMALS_TUPLES = get_tuples_no_duplicates(ANIMALS)
 
 VEHICLES = [
     "Car",
@@ -65,41 +49,47 @@ VEHICLES = [
     "Cart",
     "Bus",
     "Wheelchair",
+    "Boat",
+    "Canoe",
 ]
-VEHICLES_TUPLES = get_tuples_no_duplicates(VEHICLES)
+
+ANIMALS = ["Dog", "Cat", "Horse", "Elephant"]
+
+VERBS = ["Sit", "Walk", "Lay", "Jump", "Run", "Stand", "Smile", "Cry", "Talk", "Sing"]
+
+BALLS = ["Football", "Volleyball (Ball)", "Rugby ball", "Cricket ball", "Tennis ball"]
 
 FURNITURE = ["Table", "Chair", "Wheelchair"]
-FURNITURE_TUPLES = get_tuples_no_duplicates(FURNITURE)
 
-ATTRIBUTE_TUPLES_OTHER = [
-    ("Smile", "Cry"),
-    ("Table", "Tree"),
-    ("Sit", "Walk"),
-    ("Sit", "Run"),
-    ("Sit", "Lay"),
-    ("Sit", "Jump"),
-    ("Walk", "Run"),
-    ("Walk", "Jump"),
-    ("Walk", "Lay"),
-    ("Run", "Jump"),
-    ("Run", "Lay"),
-    ("Lay", "Jump"),
-    ("Stand", "Run"),
-    ("Stand", "Lay"),
-    ("Stand", "Jump"),
-    ("Stand", "Sit"),
-    ("Stand", "Walk"),
+ATTRIBUTES_PERSONS = [
+    "Glasses",
+    "Sun hat",
+    "Bicycle helmet",
+    "High heels",
+    "Necklace",
+    "Scarf",
+    "Swim cap",
+    "Handbag",
+    "Crown",
+    "Roller skates",
+    "Skateboard",
+    "Baseball glove",
+    "Baseball bat",
+    "Racket",
+    "Surfboard",
+    "Paddle",
+    "Dog",
+    "Table",
+    "Chair",
+    "Camera",
 ]
+ATTRIBUTES_PERSONS += INSTRUMENTS + VEHICLES + BALLS + ANIMALS + VERBS + FURNITURE
+ATTRIBUTES_PERSONS_TUPLES = get_tuples_no_duplicates(ATTRIBUTES_PERSONS)
 
 ATTRIBUTE_TUPLES = (
-    INSTRUMENTS_TUPLES
-    + ANIMALS_TUPLES
-    + VEHICLES_TUPLES
-    + FURNITURE_TUPLES
+    ATTRIBUTES_PERSONS_TUPLES
     + TEXTURES_TUPLES
     + OBJECTS_TUPLES
-    + ACCESSORIES_TUPLES
-    + ATTRIBUTE_TUPLES_OTHER
 )
 
 ### Nouns (Label1)
@@ -444,7 +434,7 @@ attributes_counter = [
 ]
 ATTRIBUTES_NAMES = [name for name, _ in attributes_counter]
 
-for attr1, attr2 in ATTRIBUTE_TUPLES_OTHER:
+for attr1, attr2 in ATTRIBUTE_TUPLES:
     assert attr1 in ATTRIBUTES_NAMES, f"{attr1} is misspelled"
     assert attr2 in ATTRIBUTES_NAMES, f"{attr2} is misspelled"
 
@@ -456,8 +446,7 @@ for noun1, noun2 in NOUN_TUPLES:
 NOUN_SYNONYMS_LIST = [
     ["Man", "Boy"],
     ["Woman", "Girl"],
-    ["Table", "Desk"],
-    ["Table", "Coffee table"],
+    ["Table", "Desk", "Coffee table"],
 ]
 NOUN_SYNONYMS = {name: name for name in NOUN_NAMES}
 for synonyms in NOUN_SYNONYMS_LIST:
@@ -469,6 +458,8 @@ ATTRIBUTE_SYNONYMS_LIST = [
     ["Sun hat", "Fedora", "Cowboy hat", "Sombrero"],
     ["Bicycle helmet", "Football helmet"],
     ["High heels", "Sandal", "Boot"],
+    ["Racket", "Tennis racket", "Table tennis racket"],
+    ["Crown", "Tiara"],
 ]
 
 
@@ -577,7 +568,10 @@ def show_image_pair(
 def is_subj_attr_in_image(sample, subject, attribute):
     if sample.relationships:
         for relationship in sample.relationships.detections:
-            if relationship.Label1 in NOUN_SYNONYMS[subject] and relationship.Label2 in ATTRIBUTE_SYNONYMS[attribute]:
+            if (
+                relationship.Label1 in NOUN_SYNONYMS[subject]
+                and relationship.Label2 in ATTRIBUTE_SYNONYMS[attribute]
+            ):
                 return relationship
 
     return False
@@ -598,9 +592,7 @@ def find_other_subj_with_attr(sample, relationship_target, attribute):
                         relationship.bounding_box, relationship_target.bounding_box
                     )
                 ]
-                if not np.all(
-                    [diff < THRESHOLD_SAME_BOUNDING_BOX for diff in diffs]
-                ):
+                if not np.all([diff < THRESHOLD_SAME_BOUNDING_BOX for diff in diffs]):
                     return relationship
 
     return None
@@ -616,7 +608,7 @@ def find_subj_with_other_attr(sample, subject, relationship_target):
                 # verify that they are not synonyms:
                 if (
                     not {relationship_target.Label2, relationship.Label2}
-                        in ATTRIBUTE_SYNONYMS_LIST
+                    in ATTRIBUTE_SYNONYMS_LIST
                 ):
                     # verify that the two subjects are not duplicate annotations
                     # (actually the (almost) the same bounding box)!
@@ -658,11 +650,11 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
         split="test",
         label_types=["relationships"],
         max_samples=max_samples,
-        # drop_existing_dataset=True,  # We need to drop the existing data to get the new filtered data
     )
 
     for target_tuple in noun_tuples:
         print("Looking for: ", target_tuple)
+        eval_set = []
         target_noun, distractor_noun = target_tuple
 
         # Compute matching images
@@ -717,7 +709,8 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
                                         rel
                                         for rel in counterexample.relationships.detections
                                         if rel.Label1 in NOUN_SYNONYMS[distractor_noun]
-                                        and rel.Label2 in ATTRIBUTE_SYNONYMS[target_attribute]
+                                        and rel.Label2
+                                        in ATTRIBUTE_SYNONYMS[target_attribute]
                                     ]
                                     counterexample_possible_relationships = drop_synonyms(
                                         counterexample_possible_relationships,
@@ -751,11 +744,14 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
                                                 # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
 
                                                 # Add example and counter-example
-                                                eval_sets[target_tuple].append(sample)
-
-        print("saving intermediate results..")
-        pickle.dump(eval_sets, open(f"data/noun-{max_samples}.p", "wb"))
-        print(f"\nFound {len(eval_sets[target_tuple])} examples for {target_tuple}.\n")
+                                                eval_set.append(sample)
+        if len(eval_set) > 0:
+            eval_sets[target_tuple] = eval_set
+            print("saving intermediate results..")
+            pickle.dump(eval_sets, open(f"data/noun-{max_samples}.p", "wb"))
+            print(
+                f"\nFound {len(eval_sets[target_tuple])} examples for {target_tuple}.\n"
+            )
 
     return eval_sets
 
@@ -766,13 +762,13 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
         split="test",
         label_types=["relationships"],
         max_samples=max_samples,
-        # drop_existing_dataset=True,  # We need to drop the existing data to get the new filtered data
     )
 
     eval_sets = {tuple: [] for tuple in attribute_tuples}
 
     for target_tuple in attribute_tuples:
         print("Looking for: ", target_tuple)
+        eval_set = []
         target_attribute, distractor_attribute = target_tuple
 
         # Compute matching images
@@ -810,7 +806,9 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
                             # Start looking for counterexample image..
                             is_counterexample_relation = F("Label1").is_in(
                                 NOUN_SYNONYMS[target_noun]
-                            ) & F("Label2").is_in(ATTRIBUTE_SYNONYMS[distractor_attribute])
+                            ) & F("Label2").is_in(
+                                ATTRIBUTE_SYNONYMS[distractor_attribute]
+                            )
                             matching_images_counterexample = matching_images.match(
                                 F("relationships.detections")
                                 .filter(is_counterexample_relation)
@@ -828,7 +826,8 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
                                         rel
                                         for rel in counterexample.relationships.detections
                                         if rel.Label1 in NOUN_SYNONYMS[target_noun]
-                                        and rel.Label2 in ATTRIBUTE_SYNONYMS[distractor_attribute]
+                                        and rel.Label2
+                                        in ATTRIBUTE_SYNONYMS[distractor_attribute]
                                     ]
                                     # TODO: necessary?
                                     counterexample_relationships = drop_synonyms(
@@ -861,11 +860,15 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
                                                 # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_rel_target, counterexample_relationship_visual_distractor])
 
                                                 # Add tuple of example and counter-example
-                                                eval_sets[target_tuple].append(sample)
+                                                eval_set.append(sample)
 
-        print("saving intermediate results..")
-        pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
-        print(f"Found {len(eval_sets[target_tuple])} examples for {target_tuple}.\n\n")
+        if len(eval_set) > 0:
+            eval_sets[target_tuple] = eval_set
+            print("saving intermediate results..")
+            pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
+            print(
+                f"Found {len(eval_sets[target_tuple])} examples for {target_tuple}.\n\n"
+            )
 
     return eval_sets
 

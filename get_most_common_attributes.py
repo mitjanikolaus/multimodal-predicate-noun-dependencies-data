@@ -43,6 +43,9 @@ def get_most_common_attributes():
     print(Counter(relationships["LabelName2"].values).most_common())
     print(Counter(relationships["RelationshipLabel"].values).most_common())
 
+    attributes_persons = Counter(relationships[relationships.LabelName1.isin(["Man", "Woman", "Boy", "Girl"])].LabelName2.values).most_common()
+    print(f"Most common attributes for persons: {attributes_persons}")
+
     relationships.to_csv("data/relationships_test_display_names.csv")
 
     # Find nouns that can be both subject and object of a relationship
