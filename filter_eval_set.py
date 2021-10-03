@@ -14,6 +14,8 @@ from PyQt5.QtWidgets import (
     QShortcut,
 )
 
+from generate_semantic_eval_sets_open_images import VERBS
+
 
 class EvalSetFilter(QWidget):
     def __init__(self):
@@ -112,8 +114,12 @@ class EvalSetFilter(QWidget):
         penWhite = QtGui.QPen(QtCore.Qt.white)
         penWhite.setWidth(3)
 
-        text_target = f"Target: a {self.sample['relationship_target'].Label2}(ing) {self.sample['relationship_target'].Label1}"
-        text_distractor = f"Target: a {self.sample['counterexample_relationship_target'].Label2}(ing) {self.sample['counterexample_relationship_target'].Label1}"
+        text_target = f"Target: a {self.sample['relationship_target'].Label1} {self.sample['relationship_target'].label} {self.sample['relationship_target'].Label2}"
+        if self.sample['relationship_target'].Label2 in VERBS:
+            text_target += "ing"
+        text_distractor = f"Distractor: a {self.sample['counterexample_relationship_target'].Label1} {self.sample['counterexample_relationship_target'].label} {self.sample['counterexample_relationship_target'].Label2}"
+        if self.sample['counterexample_relationship_target'].Label2 in VERBS:
+            text_distractor += "ing"
 
         self.text_example_target.setText(text_target)
         self.text_example_distractor.setText(text_distractor)
