@@ -829,7 +829,7 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
         if len(eval_set) > 0:
             eval_sets[target_tuple] = eval_set
             print("saving intermediate results..")
-            pickle.dump(eval_sets, open(f"data/noun-{max_samples}.p", "wb"))
+            pickle.dump(eval_sets, open(f"results/noun-{max_samples}.p", "wb"))
             print(
                 f"\nFound {len(eval_sets[target_tuple])} examples for {target_tuple}.\n"
             )
@@ -965,7 +965,7 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
         if len(eval_set) > 0:
             eval_sets[target_tuple] = eval_set
             print("saving intermediate results..")
-            pickle.dump(eval_sets, open(f"data/attribute-{max_samples}.p", "wb"))
+            pickle.dump(eval_sets, open(f"results/attribute-{max_samples}.p", "wb"))
             print(
                 f"Found {len(eval_sets[target_tuple])} examples for {target_tuple}.\n\n"
             )
@@ -998,11 +998,11 @@ if __name__ == "__main__":
             NOUN_TUPLES, args.max_samples
         )
         pickle.dump(
-            eval_sets_based_on_nouns, open(f"data/noun-{args.max_samples}.p", "wb")
+            eval_sets_based_on_nouns, open(f"results/noun-{args.max_samples}.p", "wb")
         )
 
     elif args.eval_set == "attribute_tuples":
         eval_sets = generate_eval_sets_from_attribute_tuples(
             ATTRIBUTE_TUPLES, args.max_samples
         )
-        pickle.dump(eval_sets, open(f"data/attribute-{args.max_samples}.p", "wb"))
+        pickle.dump(eval_sets, open(f"results/attribute-{args.max_samples}.p", "wb"))
