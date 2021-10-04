@@ -93,9 +93,6 @@ ATTRIBUTE_TUPLES = (
 )
 
 ### Nouns (Label1)
-NOUNS_OBJECTS = ["Coffee cup", "Wine glass", "Mug", "Bottle", "Flowerpot", "Chopsticks"]
-NOUNS_OBJECTS_TUPLES = get_tuples_no_duplicates(NOUNS_OBJECTS)
-
 NOUNS_FRUITS = [
     "Orange",
     "Grapefruit",
@@ -107,28 +104,27 @@ NOUNS_FRUITS = [
     "Pear",
     "Coconut",
 ]
-NOUNS_FRUITS_TUPLES = get_tuples_no_duplicates(NOUNS_FRUITS)
 
 NOUNS_ACCESSORIES = ["Handbag", "Backpack", "Suitcase"]
-NOUNS_ACCESSORIES_TUPLES = get_tuples_no_duplicates(NOUNS_ACCESSORIES)
 
-NOUNS_FURNITURE = ["Chair", "Table", "Sofa bed"]
-NOUNS_FURNITURE_TUPLES = get_tuples_no_duplicates(NOUNS_FURNITURE)
+NOUNS_FURNITURE = ["Chair", "Table", "Sofa bed", "Bed"]
 
 NOUNS_INSTRUMENTS = ["Piano", "Guitar", "Drum", "Violin"]
-NOUNS_INSTRUMENTS_TUPLES = get_tuples_no_duplicates(NOUNS_INSTRUMENTS)
+
+NOUNS_ANIMALS = ["Dog"]
+
+NOUNS_OBJECTS = ["Wine glass", "Mug", "Bottle", "Bowl", "Flowerpot", "Chopsticks", "Platter", "Ski"]
+
+NOUNS_OBJECTS += NOUNS_FRUITS + NOUNS_ACCESSORIES + NOUNS_FURNITURE + NOUNS_INSTRUMENTS + NOUNS_ANIMALS
+
+NOUNS_OBJECTS_TUPLES = get_tuples_no_duplicates(NOUNS_OBJECTS)
 
 NOUNS_TUPLES_OTHER = [
-    ("Desk", "Chair"),
     ("Man", "Woman"),
 ]
 
 NOUN_TUPLES = (
     NOUNS_OBJECTS_TUPLES
-    + NOUNS_FRUITS_TUPLES
-    + NOUNS_ACCESSORIES_TUPLES
-    + NOUNS_FURNITURE_TUPLES
-    + NOUNS_INSTRUMENTS_TUPLES
     + NOUNS_TUPLES_OTHER
 )
 
@@ -447,6 +443,7 @@ NOUN_SYNONYMS_LIST = [
     ["Man", "Boy"],
     ["Woman", "Girl"],
     ["Table", "Desk", "Coffee table"],
+    ["Mug", "Coffee cup"]
 ]
 NOUN_SYNONYMS = {name: name for name in NOUN_NAMES}
 for synonyms in NOUN_SYNONYMS_LIST:
@@ -460,6 +457,7 @@ ATTRIBUTE_SYNONYMS_LIST = [
     ["High heels", "Sandal", "Boot"],
     ["Racket", "Tennis racket", "Table tennis racket"],
     ["Crown", "Tiara"],
+    ["Table", "Desk", "Coffee table"],
 ]
 
 
