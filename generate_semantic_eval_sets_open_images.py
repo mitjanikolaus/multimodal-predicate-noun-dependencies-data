@@ -14,6 +14,10 @@ from utils import get_tuples_no_duplicates
 
 THRESHOLD_SAME_BOUNDING_BOX = 0.02
 
+# Bounding boxes of objects should be at least 10% of image in width and height
+THRESHOLD_MIN_BOUNDING_BOX_WIDTH = 0.1
+THRESHOLD_MIN_BOUNDING_BOX_HEIGHT = 0.1
+
 
 ####ATTRIBUTES (Label2)
 OBJECTS = ["Houseplant", "Coffee", "Tea", "Cake"]
@@ -115,7 +119,7 @@ NOUNS_ANIMALS = ["Dog"]
 
 NOUNS_OBJECTS = ["Wine glass", "Mug", "Bottle", "Bowl", "Flowerpot", "Chopsticks", "Platter", "Ski"]
 
-NOUNS_OBJECTS += NOUNS_FRUITS + NOUNS_ACCESSORIES + NOUNS_FURNITURE + NOUNS_INSTRUMENTS + NOUNS_ANIMALS
+NOUNS_OBJECTS += NOUNS_FURNITURE + NOUNS_FRUITS + NOUNS_ACCESSORIES + NOUNS_INSTRUMENTS + NOUNS_ANIMALS
 
 NOUNS_OBJECTS_TUPLES = get_tuples_no_duplicates(NOUNS_OBJECTS)
 
@@ -658,9 +662,13 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
         # Compute matching images
         is_target = F("Label1").is_in(NOUN_SYNONYMS[target_noun])
         is_distractor = F("Label1").is_in(NOUN_SYNONYMS[distractor_noun])
+        is_big_enough = (
+                (F("bounding_box")[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) &
+                (F("bounding_box")[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT)
+        )
         matching_images = dataset.match(
-            (F("relationships.detections").filter(is_target).length() > 0)
-            & (F("relationships.detections").filter(is_distractor).length() > 0)
+            (F("relationships.detections").filter(is_target & is_big_enough).length() > 0)
+            & (F("relationships.detections").filter(is_distractor & is_big_enough).length() > 0)
         )
 
         for example in tqdm(matching_images):
@@ -693,7 +701,7 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
                             ) & F("Label2").is_in(ATTRIBUTE_SYNONYMS[target_attribute])
                             matching_images_counterexample = matching_images.match(
                                 F("relationships.detections")
-                                .filter(is_counterexample_relation)
+                                .filter(is_counterexample_relation & is_big_enough)
                                 .length()
                                 > 0
                             )
@@ -772,9 +780,13 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
         # Compute matching images
         is_target = F("Label2").is_in(ATTRIBUTE_SYNONYMS[target_attribute])
         is_distractor = F("Label2").is_in(ATTRIBUTE_SYNONYMS[distractor_attribute])
+        is_big_enough = (
+                (F("bounding_box")[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) &
+                (F("bounding_box")[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT)
+        )
         matching_images = dataset.match(
-            (F("relationships.detections").filter(is_target).length() > 0)
-            & (F("relationships.detections").filter(is_distractor).length() > 0)
+            (F("relationships.detections").filter(is_target & is_big_enough).length() > 0)
+            & (F("relationships.detections").filter(is_distractor & is_big_enough).length() > 0)
         )
 
         for example in tqdm(matching_images):
@@ -809,7 +821,7 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
                             )
                             matching_images_counterexample = matching_images.match(
                                 F("relationships.detections")
-                                .filter(is_counterexample_relation)
+                                .filter(is_counterexample_relation & is_big_enough)
                                 .length()
                                 > 0
                             )
