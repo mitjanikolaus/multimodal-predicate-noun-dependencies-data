@@ -25,8 +25,7 @@ class EvalSetFilter(QWidget):
         self.eval_sets = pickle.load(open(self.input_file, "rb"))
 
         for key, values in self.eval_sets.items():
-            if len(values) > 0:
-                print(f"{key}: {len(values)}")
+            print(f"{key}: {len(values)}")
 
         self.eval_sets_filtered = {key: [] for key in self.eval_sets.keys()}
 
