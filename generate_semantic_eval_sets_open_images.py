@@ -470,14 +470,27 @@ for synonyms in SYNONYMS_LIST:
     SYNONYMS.update({item: synonyms for item in synonyms})
 
 
+def get_bounding_box_size(relationship):
+    bb = relationship.bounding_box
+    size = bb[2] * bb[3]
+    return size
+
+
 def drop_synonyms(relationships, label_name):
     filtered_rels = []
-    filtered_labels = []
     for relationship in relationships:
         label = relationship[label_name]
-        if len(set(SYNONYMS[label]) & set(filtered_labels)) == 0:
+        label_exists = False
+        for existing_rel in filtered_rels:
+            if label in SYNONYMS[existing_rel[label_name]]:
+                label_exists = True
+                # replace existing rel if new one is bigger
+                if get_bounding_box_size(relationship) > get_bounding_box_size(existing_rel):
+                    filtered_rels.remove(existing_rel)
+                    filtered_rels.append(relationship)
+                break
+        if not label_exists:
             filtered_rels.append(relationship)
-            filtered_labels.append(label)
 
     return filtered_rels
 
