@@ -61,7 +61,7 @@ VEHICLES = [
 
 ANIMALS = ["Dog", "Cat", "Horse", "Elephant"]
 
-VERBS = ["Sit", "Walk", "Lay", "Jump", "Run", "Stand", "Smile", "Cry", "Talk", "Sing"]
+VERBS = ["Smile", "Cry", "Talk", "Sing", "Sit", "Walk", "Lay", "Jump", "Run", "Stand"]
 
 BALLS = ["Football", "Volleyball (Ball)", "Rugby ball", "Cricket ball", "Tennis ball"]
 

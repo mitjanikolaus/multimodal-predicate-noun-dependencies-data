@@ -146,7 +146,7 @@ class EvalSetFilter(QWidget):
 
         for img in [sample["img_example"], sample["img_counterexample"]]:
             pixmap = QtGui.QPixmap(img)
-            pixmap = pixmap.scaledToWidth(550)
+            pixmap = pixmap.scaledToWidth(500)
 
             # create painter instance with pixmap
             self.painterInstance = QtGui.QPainter(pixmap)
@@ -253,6 +253,14 @@ class EvalSetFilter(QWidget):
         pickle.dump(
             self.eval_sets_filtered,
             open(self.input_file.replace(".p", f"_filtered_sample_{self.sample_index}_eval_set_{self.eval_set_index}.p"), "wb"),
+        )
+        summary = ""
+        for key, values in self.eval_sets_filtered.items():
+            summary += f"\n{key}: {len(values)}"
+        QMessageBox.information(
+            self,
+            "QMessageBox.information()",
+            f"Saved filtered results.\nSummary:{summary}",
         )
 
 
