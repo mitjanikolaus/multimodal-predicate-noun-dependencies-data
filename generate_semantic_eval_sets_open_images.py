@@ -703,7 +703,7 @@ def get_duplicate_sample(sample, eval_set):
 
 
 def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
-    eval_sets = {tuple: [] for tuple in noun_tuples}
+    eval_sets = {}
 
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
@@ -845,7 +845,7 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
         max_samples=max_samples,
     )
 
-    eval_sets = {tuple: [] for tuple in attribute_tuples}
+    eval_sets = {}
 
     for target_tuple in attribute_tuples:
         print("Looking for: ", target_tuple)
