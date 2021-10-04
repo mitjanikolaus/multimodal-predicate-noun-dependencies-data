@@ -485,7 +485,9 @@ def drop_synonyms(relationships, label_name):
             if label in SYNONYMS[existing_rel[label_name]]:
                 label_exists = True
                 # replace existing rel if new one is bigger
-                if get_bounding_box_size(relationship) > get_bounding_box_size(existing_rel):
+                if get_bounding_box_size(relationship) > get_bounding_box_size(
+                    existing_rel
+                ):
                     filtered_rels.remove(existing_rel)
                     filtered_rels.append(relationship)
                 break
@@ -493,6 +495,15 @@ def drop_synonyms(relationships, label_name):
             filtered_rels.append(relationship)
 
     return filtered_rels
+
+
+def get_sum_of_bounding_box_sizes(sample):
+    return (
+        get_bounding_box_size(sample["relationship_target"])
+        + get_bounding_box_size(sample["relationship_visual_distractor"])
+        + get_bounding_box_size(sample["counterexample_relationship_target"])
+        + get_bounding_box_size(sample["counterexample_relationship_visual_distractor"])
+    )
 
 
 def get_image_sharpness(img_data):
@@ -665,16 +676,14 @@ def find_subj_with_other_attr(sample, subject, relationship_target):
                         relationship.bounding_box, relationship_target.bounding_box
                     )
                 ]
-                if not np.all(
-                    [diff < THRESHOLD_SAME_BOUNDING_BOX for diff in diffs]
-                ):
+                if not np.all([diff < THRESHOLD_SAME_BOUNDING_BOX for diff in diffs]):
                     if relationship_is_sharp(sample, relationship):
                         relationships.append(relationship)
 
     return relationships
 
 
-def sample_exists_in_eval_set(sample, eval_set):
+def get_duplicate_sample(sample, eval_set):
     for existing_sample in eval_set:
         if (
             existing_sample["img_example"] == sample["img_example"]
@@ -689,8 +698,8 @@ def sample_exists_in_eval_set(sample, eval_set):
                 and existing_sample["relationship_target"].Label2
                 == sample["relationship_target"].Label2
             ):
-                return True
-    return False
+                return existing_sample
+    return None
 
 
 def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
@@ -779,14 +788,14 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
                         )
 
                         for (
-                            counterexample_relationship_target
+                            counterex_relationship_target
                         ) in counterexample_possible_relationships:
 
                             # check that visual distractor IS in image
                             counterexample_rels_visual_distractor = find_subj_with_other_attr(
                                 counterexample,
                                 target_noun,
-                                counterexample_relationship_target,
+                                counterex_relationship_target,
                             )
                             for (
                                 counterex_rel_visual_distractor
@@ -796,12 +805,22 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
                                     "img_counterexample": counterexample.filepath,
                                     "relationship_target": relationship_target,
                                     "relationship_visual_distractor": rel_visual_distractor,
-                                    "counterexample_relationship_target": counterexample_relationship_target,
+                                    "counterexample_relationship_target": counterex_relationship_target,
                                     "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
                                 }
-                                if not sample_exists_in_eval_set(
-                                    sample, eval_sets[target_tuple]
-                                ):
+                                duplicate_sample = get_duplicate_sample(
+                                    sample, eval_set
+                                )
+
+                                # Replace current sample if new one has bigger objects
+                                if duplicate_sample is not None:
+                                    if get_sum_of_bounding_box_sizes(
+                                        sample
+                                    ) > get_sum_of_bounding_box_sizes(duplicate_sample):
+                                        eval_set.remove(duplicate_sample)
+                                        eval_set.append(sample)
+
+                                else:
                                     # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
                                     # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
 
@@ -925,9 +944,18 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
                                     "counterexample_relationship_target": counterexample_rel_target,
                                     "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
                                 }
-                                if not sample_exists_in_eval_set(
-                                    sample, eval_sets[target_tuple]
-                                ):
+                                duplicate_sample = get_duplicate_sample(
+                                    sample, eval_set
+                                )
+
+                                # Replace current sample if new one has bigger objects
+                                if duplicate_sample is not None:
+                                    if get_sum_of_bounding_box_sizes(
+                                            sample
+                                    ) > get_sum_of_bounding_box_sizes(duplicate_sample):
+                                        eval_set.remove(duplicate_sample)
+                                        eval_set.append(sample)
+                                else:
                                     # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
                                     # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
 
