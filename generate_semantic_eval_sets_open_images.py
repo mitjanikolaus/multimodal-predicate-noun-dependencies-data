@@ -465,7 +465,7 @@ SYNONYMS_LIST = [
     ["Racket", "Tennis racket", "Table tennis racket"],
     ["Crown", "Tiara"],
 ]
-SYNONYMS = {name: name for name in NOUN_NAMES + ATTRIBUTES_NAMES}
+SYNONYMS = {name: [name] for name in NOUN_NAMES + ATTRIBUTES_NAMES}
 for synonyms in SYNONYMS_LIST:
     SYNONYMS.update({item: synonyms for item in synonyms})
 
