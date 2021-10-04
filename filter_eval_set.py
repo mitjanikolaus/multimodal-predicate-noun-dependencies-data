@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QShortcut,
 )
 
-from generate_semantic_eval_sets_open_images import VERBS
+from generate_semantic_eval_sets_open_images import VERBS, SYNONYMS
 
 
 class EvalSetFilter(QWidget):
@@ -65,6 +65,7 @@ class EvalSetFilter(QWidget):
         grid.addWidget(self.text_example_distractor, 3, 0)
         self.text_example_filepath = QLabel(self)
         self.text_example_filepath.setFixedHeight(15)
+        self.text_example_filepath.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
         grid.addWidget(self.text_example_filepath, 4, 0)
 
         self.text_counterexample_target = QLabel(self)
@@ -75,6 +76,7 @@ class EvalSetFilter(QWidget):
         grid.addWidget(self.text_counterexample_distractor, 3, 1)
         self.text_counterexample_filepath = QLabel(self)
         self.text_counterexample_filepath.setFixedHeight(15)
+        self.text_counterexample_filepath.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
         grid.addWidget(self.text_counterexample_filepath, 4, 1)
 
         self.plot_sample(self.sample)
@@ -128,19 +130,19 @@ class EvalSetFilter(QWidget):
         penWhite = QtGui.QPen(QtCore.Qt.white)
         penWhite.setWidth(3)
 
-        text_target = f"Target: a {self.sample['relationship_target'].Label1} {self.sample['relationship_target'].label} {self.sample['relationship_target'].Label2}"
+        text_target = f"a {SYNONYMS[self.sample['relationship_target'].Label1][0]} {self.sample['relationship_target'].label} {SYNONYMS[self.sample['relationship_target'].Label2][0]}"
         if self.sample['relationship_target'].Label2 in VERBS:
             text_target += "ing"
-        text_distractor = f"Distractor: a {self.sample['counterexample_relationship_target'].Label1} {self.sample['counterexample_relationship_target'].label} {self.sample['counterexample_relationship_target'].Label2}"
+        text_distractor = f"a {SYNONYMS[self.sample['counterexample_relationship_target'].Label1][0]} {self.sample['counterexample_relationship_target'].label} {SYNONYMS[self.sample['counterexample_relationship_target'].Label2][0]}"
         if self.sample['counterexample_relationship_target'].Label2 in VERBS:
             text_distractor += "ing"
 
-        self.text_example_target.setText(text_target)
-        self.text_example_distractor.setText(text_distractor)
+        self.text_example_target.setText("Target: " + text_target)
+        self.text_example_distractor.setText("Distractor: " + text_distractor)
         self.text_example_filepath.setText(self.sample['img_example'])
 
-        self.text_counterexample_target.setText(text_distractor)
-        self.text_counterexample_distractor.setText(text_target)
+        self.text_counterexample_target.setText("Target: " + text_distractor)
+        self.text_counterexample_distractor.setText("Distractor: " + text_target)
         self.text_counterexample_filepath.setText(self.sample['img_counterexample'])
 
         for img in [sample["img_example"], sample["img_counterexample"]]:
