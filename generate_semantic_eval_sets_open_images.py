@@ -681,6 +681,9 @@ def sample_exists_in_eval_set(sample, eval_set):
         if (
             existing_sample["img_example"] == sample["img_example"]
             and existing_sample["img_counterexample"] == sample["img_counterexample"]
+        ) or (
+            existing_sample["img_example"] == sample["img_counterexample"]
+            and existing_sample["img_counterexample"] == sample["img_example"]
         ):
             if (
                 existing_sample["relationship_target"].Label1
@@ -950,18 +953,18 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
                                                 sample, eval_sets[target_tuple]
                                             ):
                                                 # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
-                                                show_image_pair(
-                                                    example.filepath,
-                                                    counterexample.filepath,
-                                                    [
-                                                        relationship_target,
-                                                        rel_visual_distractor,
-                                                    ],
-                                                    [
-                                                        counterexample_rel_target,
-                                                        counterexample_relationship_visual_distractor,
-                                                    ],
-                                                )
+                                                # show_image_pair(
+                                                #     example.filepath,
+                                                #     counterexample.filepath,
+                                                #     [
+                                                #         relationship_target,
+                                                #         rel_visual_distractor,
+                                                #     ],
+                                                #     [
+                                                #         counterexample_rel_target,
+                                                #         counterexample_relationship_visual_distractor,
+                                                #     ],
+                                                # )
 
                                                 # Add tuple of example and counter-example
                                                 eval_set.append(sample)
