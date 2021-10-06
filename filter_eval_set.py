@@ -220,22 +220,17 @@ class EvalSetFilter(QWidget):
         self.sample_index = 0
 
         self.eval_set_index += 1
+        if self.eval_set_index >= len(self.eval_sets.keys()):
+            self.save()
+            QMessageBox.information(
+                self,
+                "QMessageBox.information()",
+                "End of dataset, filtered everything!",
+            )
+            self.close()
+            sys.exit()
         self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
         self.eval_set = self.eval_sets[self.eval_set_key]
-
-        while self.sample_index >= len(self.eval_set):
-            self.eval_set_index += 1
-            if self.eval_set_index >= len(self.eval_sets.keys()):
-                self.save()
-                QMessageBox.information(
-                    self,
-                    "QMessageBox.information()",
-                    "End of dataset, filtered everything!",
-                )
-                self.close()
-                sys.exit()
-            self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
-            self.eval_set = self.eval_sets[self.eval_set_key]
 
         self.sample = self.eval_set[self.sample_index]
         self.plot_sample(self.sample)
