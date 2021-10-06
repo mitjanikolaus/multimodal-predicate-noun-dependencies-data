@@ -28,6 +28,10 @@ class EvalSetFilter(QWidget):
             print(f"{key}: {len(values)}")
 
         self.eval_sets_filtered = {key: [] for key in self.eval_sets.keys()}
+        self.eval_sets_rejected_examples = {key: [] for key in self.eval_sets.keys()}
+        self.eval_sets_rejected_counterexamples = {
+            key: [] for key in self.eval_sets.keys()
+        }
 
         self.eval_set_index = 0
         self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
@@ -64,7 +68,9 @@ class EvalSetFilter(QWidget):
         grid.addWidget(self.text_example_distractor, 3, 0)
         self.text_example_filepath = QLabel(self)
         self.text_example_filepath.setFixedHeight(15)
-        self.text_example_filepath.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        self.text_example_filepath.setTextInteractionFlags(
+            QtCore.Qt.TextSelectableByMouse
+        )
         grid.addWidget(self.text_example_filepath, 4, 0)
 
         self.text_counterexample_target = QLabel(self)
@@ -75,7 +81,9 @@ class EvalSetFilter(QWidget):
         grid.addWidget(self.text_counterexample_distractor, 3, 1)
         self.text_counterexample_filepath = QLabel(self)
         self.text_counterexample_filepath.setFixedHeight(15)
-        self.text_counterexample_filepath.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        self.text_counterexample_filepath.setTextInteractionFlags(
+            QtCore.Qt.TextSelectableByMouse
+        )
         grid.addWidget(self.text_counterexample_filepath, 4, 1)
 
         self.plot_sample(self.sample)
@@ -90,24 +98,24 @@ class EvalSetFilter(QWidget):
 
         button_accept = QPushButton("accept (ctrl+a)")
         button_accept.clicked.connect(self.accept)
-        grid.addWidget(button_accept, 5, 0)
+        grid.addWidget(button_accept, 5, 0, 1, 2)
         shortcut_accept = QShortcut(QKeySequence("Ctrl+A"), self)
         shortcut_accept.activated.connect(self.accept)
 
-        button_reject = QPushButton("reject (ctrl+r)")
-        button_reject.clicked.connect(self.reject)
-        grid.addWidget(button_reject, 5, 1)
-        shortcut_reject = QShortcut(QKeySequence("Ctrl+R"), self)
-        shortcut_reject.activated.connect(self.reject)
-
-        button_reject_example = QPushButton("reject example (ctrl+e)")
-        button_reject_example.clicked.connect(self.reject_example)
-        grid.addWidget(button_reject_example, 6, 0)
+        button_reject = QPushButton("reject example (ctrl+e)")
+        button_reject.clicked.connect(self.reject_example)
+        grid.addWidget(button_reject, 6, 0)
         shortcut_reject = QShortcut(QKeySequence("Ctrl+E"), self)
         shortcut_reject.activated.connect(self.reject_example)
 
+        button_reject_counterexample = QPushButton("reject counterexample (ctrl+r)")
+        button_reject_counterexample.clicked.connect(self.reject_counterexample)
+        grid.addWidget(button_reject_counterexample, 6, 1)
+        shortcut_reject = QShortcut(QKeySequence("Ctrl+R"), self)
+        shortcut_reject.activated.connect(self.reject_counterexample)
+
         button_next_eval_set = QPushButton("Go to next eval set")
-        button_next_eval_set.clicked.connect(self.goto_next_eval_set)
+        button_next_eval_set.clicked.connect(self.goto_next_eval_set_and_load_sample)
         grid.addWidget(button_next_eval_set, 7, 0, 1, 2)
 
         button_save = QPushButton("Save filtered results")
@@ -130,19 +138,19 @@ class EvalSetFilter(QWidget):
         penWhite.setWidth(3)
 
         text_target = f"a {SYNONYMS[self.sample['relationship_target'].Label1][0]} {self.sample['relationship_target'].label} {SYNONYMS[self.sample['relationship_target'].Label2][0]}"
-        if self.sample['relationship_target'].Label2 in VERBS:
+        if self.sample["relationship_target"].Label2 in VERBS:
             text_target += "ing"
         text_distractor = f"a {SYNONYMS[self.sample['counterexample_relationship_target'].Label1][0]} {self.sample['counterexample_relationship_target'].label} {SYNONYMS[self.sample['counterexample_relationship_target'].Label2][0]}"
-        if self.sample['counterexample_relationship_target'].Label2 in VERBS:
+        if self.sample["counterexample_relationship_target"].Label2 in VERBS:
             text_distractor += "ing"
 
         self.text_example_target.setText("Target: " + text_target)
         self.text_example_distractor.setText("Distractor: " + text_distractor)
-        self.text_example_filepath.setText(self.sample['img_example'])
+        self.text_example_filepath.setText(self.sample["img_example"])
 
         self.text_counterexample_target.setText("Target: " + text_distractor)
         self.text_counterexample_distractor.setText("Distractor: " + text_target)
-        self.text_counterexample_filepath.setText(self.sample['img_counterexample'])
+        self.text_counterexample_filepath.setText(self.sample["img_counterexample"])
 
         for img in [sample["img_example"], sample["img_counterexample"]]:
             pixmap = QtGui.QPixmap(img)
@@ -187,34 +195,61 @@ class EvalSetFilter(QWidget):
             else:
                 self.pic_example.setPixmap(pixmap)
 
-    def reject_example(self):
-        current_example = self.sample['img_example']
-        while current_example == self.sample['img_example']:
-            self.sample = self.get_next_sample()
-
-        self.plot_sample(self.sample)
-
-    def get_next_sample(self):
+    def next_sample(self):
         self.sample_index += 1
         while self.sample_index >= len(self.eval_set):
-            self.eval_set_index += 1
-            if self.eval_set_index >= len(self.eval_sets.keys()):
-                self.save()
-                QMessageBox.information(
-                    self,
-                    "QMessageBox.information()",
-                    "End of dataset, filtered everything!",
-                )
-                self.close()
-                sys.exit()
-            self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
-            self.eval_set = self.eval_sets[self.eval_set_key]
-            self.sample_index = 0
-            print(f"finished eval set {self.eval_set_key}")
+            self.goto_next_eval_set()
 
-        sample = self.eval_set[self.sample_index]
+        return self.eval_set[self.sample_index]
+
+    def sample_already_processed(self, sample):
+        """Return true if either example or counterexample already exist in the filtered or rejected samples"""
+
+        def relationships_are_equal(s1, s2):
+            return (
+                s1["relationship_target"].Label1
+                in SYNONYMS[s2["relationship_target"].Label1]
+                and s1["relationship_target"].Label2
+                in SYNONYMS[s2["relationship_target"].Label2]
+                and s1["counterexample_relationship_target"].Label1
+                in SYNONYMS[s2["counterexample_relationship_target"].Label1]
+                and s1["counterexample_relationship_target"].Label2
+                in SYNONYMS[s2["counterexample_relationship_target"].Label2]
+            )
+
+        for s in self.eval_sets_filtered[self.eval_set_key]:
+            if (
+                s["img_example"] == sample["img_example"]
+                or s["img_counterexample"] == sample["img_counterexample"]
+            ):
+                if relationships_are_equal(s, sample):
+                    return True
+
+        for s in self.eval_sets_rejected_examples[self.eval_set_key]:
+            if s["img_example"] == sample["img_example"]:
+                if relationships_are_equal(s, sample):
+                    return True
+
+        for s in self.eval_sets_rejected_counterexamples[self.eval_set_key]:
+            if s["img_counterexample"] == sample["img_counterexample"]:
+                if relationships_are_equal(s, sample):
+                    return True
+
+        return False
+
+    def get_next_sample(self):
+        sample = self.next_sample()
+        example_in_filtered_eval_sets = self.sample_already_processed(sample)
+        while example_in_filtered_eval_sets:
+            sample = self.next_sample()
+            example_in_filtered_eval_sets = self.sample_already_processed(sample)
 
         return sample
+
+    def goto_next_eval_set_and_load_sample(self):
+        self.goto_next_eval_set()
+        self.sample = self.eval_set[self.sample_index]
+        self.plot_sample(self.sample)
 
     def goto_next_eval_set(self):
         self.sample_index = 0
@@ -232,22 +267,28 @@ class EvalSetFilter(QWidget):
         self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
         self.eval_set = self.eval_sets[self.eval_set_key]
 
-        self.sample = self.eval_set[self.sample_index]
-        self.plot_sample(self.sample)
-
     def accept(self):
         self.eval_sets_filtered[self.eval_set_key].append(self.sample)
         self.sample = self.get_next_sample()
         self.plot_sample(self.sample)
 
-    def reject(self):
+    def reject_example(self):
+        self.eval_sets_rejected_examples[self.eval_set_key].append(self.sample)
+        self.sample = self.get_next_sample()
+        self.plot_sample(self.sample)
+
+    def reject_counterexample(self):
+        self.eval_sets_rejected_counterexamples[self.eval_set_key].append(self.sample)
         self.sample = self.get_next_sample()
         self.plot_sample(self.sample)
 
     def save(self):
+        file_name = self.input_file.replace(
+            ".p",
+            f"_filtered_eval_set_{self.eval_set_index}_sample_{self.sample_index}.p",
+        )
         pickle.dump(
-            self.eval_sets_filtered,
-            open(self.input_file.replace(".p", f"_filtered_sample_{self.sample_index}_eval_set_{self.eval_set_index}.p"), "wb"),
+            self.eval_sets_filtered, open(file_name, "wb",),
         )
         summary = ""
         for key, values in self.eval_sets_filtered.items():
