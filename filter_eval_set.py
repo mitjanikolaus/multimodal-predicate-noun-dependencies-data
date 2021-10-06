@@ -1,3 +1,4 @@
+import argparse
 import pickle
 
 from PyQt5 import QtGui, QtCore
@@ -18,10 +19,11 @@ from generate_semantic_eval_sets_open_images import VERBS, SYNONYMS
 
 
 class EvalSetFilter(QWidget):
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
 
-        self.input_file = "results/attribute-None.p"
+        self.input_file = args.input_file
+        print("Processing: ", self.input_file)
         self.eval_sets = pickle.load(open(self.input_file, "rb"))
 
         for key, values in self.eval_sets.items():
@@ -300,7 +302,20 @@ class EvalSetFilter(QWidget):
         )
 
 
+def parse_args():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument(
+        "--input-file",
+        type=str,
+        required=True,
+    )
+
+    args = argparser.parse_args()
+
+    return args
+
 if __name__ == "__main__":
+    args = parse_args()
     app = QApplication(sys.argv)
-    ex = EvalSetFilter()
+    ex = EvalSetFilter(args)
     sys.exit(app.exec_())
