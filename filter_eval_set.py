@@ -294,7 +294,8 @@ class EvalSetFilter(QWidget):
         )
         summary = ""
         for key, values in self.eval_sets_filtered.items():
-            summary += f"\n{key}: {len(values)}"
+            if len(values) > 0:
+                summary += f"\n{key}: {len(values)}"
         QMessageBox.information(
             self,
             "QMessageBox.information()",
@@ -313,6 +314,7 @@ def parse_args():
     args = argparser.parse_args()
 
     return args
+
 
 if __name__ == "__main__":
     args = parse_args()
