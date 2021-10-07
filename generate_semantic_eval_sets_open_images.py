@@ -138,6 +138,9 @@ NOUNS_OBJECTS_TUPLES = get_tuples_no_duplicates(NOUNS_OBJECTS)
 
 NOUNS_TUPLES_OTHER = [
     ("Man", "Woman"),
+    ("Man", "Girl"),
+    ("Woman", "Boy"),
+    ("Girl", "Boy"),
 ]
 
 NOUN_TUPLES = NOUNS_OBJECTS_TUPLES + NOUNS_TUPLES_OTHER
@@ -454,8 +457,6 @@ for noun1, noun2 in NOUN_TUPLES:
 
 
 SYNONYMS_LIST = [
-    ["Man", "Boy"],
-    ["Woman", "Girl"],
     ["Table", "Desk", "Coffee table"],
     ["Mug", "Coffee cup"],
     ["Glasses", "Sunglasses", "Goggles"],
@@ -641,6 +642,10 @@ def find_other_subj_with_attr(sample, relationship_target, attribute):
     relationships = []
     if sample.relationships:
         for relationship in sample.relationships.detections:
+            if relationship.Label1 in ["Boy", "Man"] and relationship_target.Label1 in ["Boy", "Man"]:
+                continue
+            if relationship.Label1 in ["Girl", "Woman"] and relationship_target.Label1 in ["Girl", "Woman"]:
+                continue
             if (
                 relationship.Label1 not in SYNONYMS[relationship_target.Label1]
                 and relationship.Label2 in SYNONYMS[attribute]
@@ -710,6 +715,7 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
         split="test",
         label_types=["relationships"],
         max_samples=max_samples,
+        dataset_name="open-images-v6-test",
     )
 
     for target_tuple in noun_tuples:
@@ -843,6 +849,7 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
         split="test",
         label_types=["relationships"],
         max_samples=max_samples,
+        dataset_name="open-images-v6-test",
     )
 
     eval_sets = {}
@@ -881,7 +888,6 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
                     example, rel.Label1, distractor_attribute
                 )  # check that distractor IS NOT in same image
             ]
-            # TODO: necessary?
             relationships = drop_synonyms(relationships, "Label1")
 
             for relationship_target in relationships:
@@ -951,13 +957,13 @@ def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
                                 # Replace current sample if new one has bigger objects
                                 if duplicate_sample is not None:
                                     if get_sum_of_bounding_box_sizes(
-                                            sample
+                                        sample
                                     ) > get_sum_of_bounding_box_sizes(duplicate_sample):
                                         eval_set.remove(duplicate_sample)
                                         eval_set.append(sample)
                                 else:
                                     # print(f"Found minimal pair: {sample_target.open_images_id} {sample_distractor.open_images_id}")
-                                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, relationship_visual_distractor], [counterexample_relationship_target, counterexample_relationship_visual_distractor])
+                                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterexample_rel_target, counterex_rel_visual_distractor])
 
                                     # Add tuple of example and counter-example
                                     eval_set.append(sample)
