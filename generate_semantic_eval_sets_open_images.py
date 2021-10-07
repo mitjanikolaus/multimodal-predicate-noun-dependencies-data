@@ -712,10 +712,9 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
 
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
-        split="test",
         label_types=["relationships"],
         max_samples=max_samples,
-        dataset_name="open-images-v6-test",
+        dataset_name="open-images-v6",
     )
 
     for target_tuple in noun_tuples:
@@ -846,10 +845,9 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, max_samples):
 def generate_eval_sets_from_attribute_tuples(attribute_tuples, max_samples):
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
-        split="test",
         label_types=["relationships"],
         max_samples=max_samples,
-        dataset_name="open-images-v6-test",
+        dataset_name="open-images-v6",
     )
 
     eval_sets = {}
