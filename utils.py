@@ -82,7 +82,7 @@ OBJECTS_OTHERS = [
     "Glasses",
     "Bottle",
     "Wine glass",
-    "Coffee cup"
+    "Coffee cup",
     "Sun hat",
     "Bicycle helmet",
     "High heels",
