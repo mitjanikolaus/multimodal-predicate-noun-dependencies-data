@@ -10,14 +10,14 @@ def get_tuples_no_duplicates(names):
     return tuples
 
 
-####ATTRIBUTES (Label2)
-OBJECTS = ["Houseplant", "Coffee", "Tea", "Cake"]
-OBJECTS_TUPLES = get_tuples_no_duplicates(OBJECTS)
+####Objects (Label2)
+OBJECTS_OTHERS = ["Houseplant", "Coffee", "Tea", "Cake"]
+OBJECTS_OTHERS_TUPLES = get_tuples_no_duplicates(OBJECTS_OTHERS)
 
-TEXTURES = ["Wooden", "Plastic", "Transparent", "(made of)Leather", "(made of)Textile"]
-TEXTURES_TUPLES = get_tuples_no_duplicates(TEXTURES)
+OBJECTS_TEXTURES = ["Wooden", "Plastic", "Transparent", "(made of)Leather", "(made of)Textile"]
+OBJECTS_TEXTURES_TUPLES = get_tuples_no_duplicates(OBJECTS_TEXTURES)
 
-INSTRUMENTS = [
+OBJECTS_INSTRUMENTS = [
     "French horn",
     "Piano",
     "Saxophone",
@@ -34,7 +34,7 @@ INSTRUMENTS = [
     "Musical keyboard",
 ]
 
-VEHICLES = [
+OBJECTS_VEHICLES = [
     "Car",
     "Motorcycle",
     "Bicycle",
@@ -48,15 +48,15 @@ VEHICLES = [
     "Canoe",
 ]
 
-ANIMALS = ["Dog", "Cat", "Horse", "Elephant"]
+OBJECTS_ANIMALS = ["Dog", "Cat", "Horse", "Elephant"]
 
-VERBS = ["Smile", "Cry", "Talk", "Sing", "Sit", "Walk", "Lay", "Jump", "Run", "Stand"]
+OBJECTS_VERBS = ["Smile", "Cry", "Talk", "Sing", "Sit", "Walk", "Lay", "Jump", "Run", "Stand"]
 
-BALLS = ["Football", "Volleyball (Ball)", "Rugby ball", "Cricket ball", "Tennis ball"]
+OBJECTS_BALLS = ["Football", "Volleyball (Ball)", "Rugby ball", "Cricket ball", "Tennis ball"]
 
-FURNITURE = ["Table", "Chair", "Wheelchair"]
+OBJECTS_FURNITURE = ["Table", "Chair", "Wheelchair"]
 
-ATTRIBUTES_PERSONS = [
+OBJECTS_ATTRIBUTES_PERSONS = [
     "Glasses",
     "Sun hat",
     "Bicycle helmet",
@@ -78,10 +78,10 @@ ATTRIBUTES_PERSONS = [
     "Chair",
     "Camera",
 ]
-ATTRIBUTES_PERSONS += INSTRUMENTS + VEHICLES + BALLS + ANIMALS + VERBS + FURNITURE
-ATTRIBUTES_PERSONS_TUPLES = get_tuples_no_duplicates(ATTRIBUTES_PERSONS)
+OBJECTS_ATTRIBUTES_PERSONS += OBJECTS_INSTRUMENTS + OBJECTS_VEHICLES + OBJECTS_BALLS + OBJECTS_ANIMALS + OBJECTS_VERBS + OBJECTS_FURNITURE
+OBJECTS_ATTRIBUTES_PERSONS_TUPLES = get_tuples_no_duplicates(OBJECTS_ATTRIBUTES_PERSONS)
 
-ATTRIBUTE_TUPLES = ATTRIBUTES_PERSONS_TUPLES + TEXTURES_TUPLES + OBJECTS_TUPLES
+OBJECTS_TUPLES = OBJECTS_ATTRIBUTES_PERSONS_TUPLES + OBJECTS_TEXTURES_TUPLES + OBJECTS_OTHERS_TUPLES
 
 ### Nouns (Label1)
 NOUNS_FRUITS = [
@@ -104,7 +104,7 @@ NOUNS_INSTRUMENTS = ["Piano", "Guitar", "Drum", "Violin"]
 
 NOUNS_ANIMALS = ["Dog"]
 
-NOUNS_OBJECTS = [
+NOUNS = [
     "Wine glass",
     "Mug",
     "Bottle",
@@ -115,7 +115,7 @@ NOUNS_OBJECTS = [
     "Ski",
 ]
 
-NOUNS_OBJECTS += (
+NOUNS += (
     NOUNS_FURNITURE
     + NOUNS_FRUITS
     + NOUNS_ACCESSORIES
@@ -123,16 +123,28 @@ NOUNS_OBJECTS += (
     + NOUNS_ANIMALS
 )
 
-NOUNS_OBJECTS_TUPLES = get_tuples_no_duplicates(NOUNS_OBJECTS)
+NOUNS_GENERAL_TUPLES = get_tuples_no_duplicates(NOUNS)
 
-NOUNS_TUPLES_OTHER = [
+NOUNS_OTHERS_TUPLES = [
     ("Man", "Woman"),
     ("Man", "Girl"),
     ("Woman", "Boy"),
     ("Girl", "Boy"),
 ]
 
-NOUN_TUPLES = NOUNS_OBJECTS_TUPLES + NOUNS_TUPLES_OTHER
+NOUN_TUPLES = NOUNS_GENERAL_TUPLES + NOUNS_OTHERS_TUPLES
+
+RELATIONSHIPS_SPATIAL = ["at", "contain", "holds", "on", "hang", "inside_of", "under"]
+RELATIONSHIPS_SPATIAL_TUPLES = get_tuples_no_duplicates(RELATIONSHIPS_SPATIAL)
+
+RELATIONSHIPS_BALL = ["throw", "catch", "kick", "holds", "hits"]
+RELATIONSHIPS_BALL_TUPLES = get_tuples_no_duplicates(RELATIONSHIPS_BALL)
+
+RELATIONSHIPS_FOOD = ["eat", "drink"]
+RELATIONSHIPS_FOOD_TUPLES = get_tuples_no_duplicates(RELATIONSHIPS_FOOD)
+
+RELATIONSHIPS = RELATIONSHIPS_SPATIAL + RELATIONSHIPS_BALL + RELATIONSHIPS_FOOD
+RELATIONSHIPS_TUPLES = RELATIONSHIPS_SPATIAL_TUPLES + RELATIONSHIPS_BALL_TUPLES + RELATIONSHIPS_FOOD_TUPLES
 
 nouns_counter = [
     ("Man", 31890),
@@ -221,8 +233,9 @@ relationships_counter = [
     ("under", 10),
     ("ski", 7),
 ]
+RELATIONSHIP_NAMES = [name for name, _ in relationships_counter]
 
-attributes_counter = [
+objects_counter = [
     ("Stand", 29768),
     ("Smile", 12492),
     ("Sit", 11017),
@@ -434,16 +447,15 @@ attributes_counter = [
     ("Tablet computer", 1),
     ("Bowl", 1),
 ]
-ATTRIBUTES_NAMES = [name for name, _ in attributes_counter]
+OBJECT_NAMES = [name for name, _ in objects_counter]
 
-for attr1, attr2 in ATTRIBUTE_TUPLES:
-    assert attr1 in ATTRIBUTES_NAMES, f"{attr1} is misspelled"
-    assert attr2 in ATTRIBUTES_NAMES, f"{attr2} is misspelled"
+for obj1, obj2 in OBJECTS_TUPLES:
+    assert obj1 in OBJECT_NAMES, f"{obj1} is misspelled"
+    assert obj2 in OBJECT_NAMES, f"{obj2} is misspelled"
 
 for noun1, noun2 in NOUN_TUPLES:
     assert noun1 in NOUN_NAMES, f"{noun1} is misspelled"
     assert noun2 in NOUN_NAMES, f"{noun2} is misspelled"
-
 
 SYNONYMS_LIST = [
     ["Table", "Desk", "Coffee table"],
@@ -456,9 +468,10 @@ SYNONYMS_LIST = [
     ["Crown", "Tiara"],
 ]
 
-SYNONYMS = {name: [name] for name in NOUN_NAMES + ATTRIBUTES_NAMES}
+SYNONYMS = {name: [name] for name in NOUN_NAMES + OBJECT_NAMES + RELATIONSHIP_NAMES}
 for synonyms in SYNONYMS_LIST:
     SYNONYMS.update({item: synonyms for item in synonyms})
 
+VALID_NAMES = {"label": RELATIONSHIPS, "Label2": OBJECT_NAMES}
 
 

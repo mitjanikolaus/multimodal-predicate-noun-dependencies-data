@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QShortcut,
 )
 
-from generate_semantic_eval_sets_open_images import VERBS, SYNONYMS
+from utils import OBJECTS_VERBS, SYNONYMS
 
 
 class EvalSetFilter(QWidget):
@@ -140,10 +140,10 @@ class EvalSetFilter(QWidget):
         penWhite.setWidth(3)
 
         text_target = f"a {SYNONYMS[self.sample['relationship_target'].Label1][0]} {self.sample['relationship_target'].label} {SYNONYMS[self.sample['relationship_target'].Label2][0]}"
-        if self.sample["relationship_target"].Label2 in VERBS:
+        if self.sample["relationship_target"].Label2 in OBJECTS_VERBS:
             text_target += "ing"
         text_distractor = f"a {SYNONYMS[self.sample['counterexample_relationship_target'].Label1][0]} {self.sample['counterexample_relationship_target'].label} {SYNONYMS[self.sample['counterexample_relationship_target'].Label2][0]}"
-        if self.sample["counterexample_relationship_target"].Label2 in VERBS:
+        if self.sample["counterexample_relationship_target"].Label2 in OBJECTS_VERBS:
             text_distractor += "ing"
 
         self.text_example_target.setText("Target: " + text_target)
