@@ -15,8 +15,6 @@ def get_tuples_no_duplicates(names):
 
 
 # Objects (Label2)
-OBJECTS_OTHERS = ["Houseplant", "Coffee", "Tea", "Cake"]
-OBJECTS_OTHERS_TUPLES = get_tuples_no_duplicates(OBJECTS_OTHERS)
 
 OBJECTS_TEXTURES = [
     "Wooden",
@@ -38,10 +36,10 @@ OBJECTS_INSTRUMENTS = [
     "Microphone",
     "Cello",
     "Trombone",
-    "Harp",
     "Flute",
     "Drum",
     "Musical keyboard",
+    "Banjo"
 ]
 
 OBJECTS_VEHICLES = [
@@ -56,6 +54,11 @@ OBJECTS_VEHICLES = [
     "Wheelchair",
     "Boat",
     "Canoe",
+    "Truck",
+    "Train",
+    "Tank",
+    "Airplane",
+    "Van"
 ]
 
 OBJECTS_ANIMALS = ["Dog", "Cat", "Horse", "Elephant"]
@@ -73,51 +76,71 @@ OBJECTS_VERBS = [
     "Stand",
 ]
 
-OBJECTS_BALLS = [
-    "Football",
-    "Volleyball (Ball)",
-    "Rugby ball",
-    "Cricket ball",
-    "Tennis ball",
-]
+OBJECTS_FURNITURE = ["Table", "Chair", "Bench", "Bed", "Sofa bed", "Billiard table"]
 
-OBJECTS_FURNITURE = ["Table", "Chair", "Wheelchair"]
-
-OBJECTS_ATTRIBUTES_PERSONS = [
+OBJECTS_OTHERS = [
     "Glasses",
+    "Bottle",
+    "Wine glass",
+    "Coffee cup"
     "Sun hat",
     "Bicycle helmet",
     "High heels",
     "Necklace",
     "Scarf",
+    "Belt",
     "Swim cap",
     "Handbag",
     "Crown",
-    "Roller skates",
-    "Skateboard",
+    "Football",
     "Baseball glove",
     "Baseball bat",
     "Racket",
     "Surfboard",
     "Paddle",
-    "Dog",
-    "Table",
-    "Chair",
     "Camera",
+    "Mobile phone",
+    "Houseplant",
+    "Coffee",
+    "Tea",
+    "Cocktail",
+    "Juice",
+    "Cake",
+    "Strawberry",
+    "Wine",
+    "Beer",
+    "Woman",
+    "Man",
+    "Tent",
+    "Tree",
+    "Girl",
+    "Boy",
+    "Balloon",
+    "Rifle",
+    "Earrings",
+    "Teddy bear",
+    "Doll",
+    "Bicycle wheel",
+    "Ski",
+    "Backpack",
+    "Ice cream",
+    "Book",
+    "Cutting board",
+    "Watch",
+    "Tripod",
+    "Rose"
 ]
-OBJECTS_ATTRIBUTES_PERSONS += (
+
+OBJECTS_OTHERS += (
     OBJECTS_INSTRUMENTS
     + OBJECTS_VEHICLES
-    + OBJECTS_BALLS
     + OBJECTS_ANIMALS
     + OBJECTS_VERBS
     + OBJECTS_FURNITURE
 )
-OBJECTS_ATTRIBUTES_PERSONS_TUPLES = get_tuples_no_duplicates(OBJECTS_ATTRIBUTES_PERSONS)
+OBJECTS_OTHERS_TUPLES = get_tuples_no_duplicates(OBJECTS_OTHERS)
 
-OBJECTS_TUPLES = (
-    OBJECTS_ATTRIBUTES_PERSONS_TUPLES + OBJECTS_TEXTURES_TUPLES + OBJECTS_OTHERS_TUPLES
-)
+OBJECTS_TUPLES = OBJECTS_OTHERS_TUPLES + OBJECTS_TEXTURES_TUPLES
 
 # Nouns (Label1)
 NOUNS_FRUITS = [
@@ -179,12 +202,25 @@ RELATIONSHIPS_SPATIAL_TUPLES = get_tuples_no_duplicates(RELATIONSHIPS_SPATIAL)
 RELATIONSHIPS_BALL = ["throw", "catch", "kick", "holds", "hits"]
 RELATIONSHIPS_BALL_TUPLES = get_tuples_no_duplicates(RELATIONSHIPS_BALL)
 
-RELATIONSHIPS_OTHERS = ["eat", "drink", "read", "dance", "kiss", "skateboard", "surf", "ride", "hug", "plays"]
+RELATIONSHIPS_OTHERS = [
+    "eat",
+    "drink",
+    "read",
+    "dance",
+    "kiss",
+    "skateboard",
+    "surf",
+    "ride",
+    "hug",
+    "plays",
+]
 RELATIONSHIPS_OTHERS_TUPLES = get_tuples_no_duplicates(RELATIONSHIPS_OTHERS)
 
 RELATIONSHIPS = RELATIONSHIPS_SPATIAL + RELATIONSHIPS_BALL + RELATIONSHIPS_OTHERS
 RELATIONSHIPS_TUPLES = (
-        RELATIONSHIPS_SPATIAL_TUPLES + RELATIONSHIPS_BALL_TUPLES + RELATIONSHIPS_OTHERS_TUPLES
+    RELATIONSHIPS_SPATIAL_TUPLES
+    + RELATIONSHIPS_BALL_TUPLES
+    + RELATIONSHIPS_OTHERS_TUPLES
 )
 
 nouns_counter = pd.read_csv(
@@ -220,6 +256,9 @@ SYNONYMS_LIST = [
     ["Racket", "Tennis racket", "Table tennis racket"],
     ["Crown", "Tiara"],
     ["Handbag", "Briefcase"],
+    ["Cart", "Golf cart"],
+    ["Football", "Volleyball (Ball)", "Rugby ball", "Cricket ball", "Tennis ball"],
+    ["Tree", "Palm tree"]
 ]
 
 SYNONYMS = {name: [name] for name in NOUN_NAMES + OBJECT_NAMES + RELATIONSHIP_NAMES}
