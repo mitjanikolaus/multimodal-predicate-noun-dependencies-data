@@ -219,7 +219,12 @@ def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label)
                     relationship.bounding_box, relationship_target.bounding_box
                 ):
                     if relationship_is_sharp(sample, relationship):
-                        relationships.append(relationship)
+                        # For spatial relationships we require also the object to be the same
+                        if relationship[rel_label] in RELATIONSHIPS_SPATIAL:
+                            if relationship["Label2"] in SYNONYMS[relationship_target["Label2"]]:
+                                relationships.append(relationship)
+                        else:
+                            relationships.append(relationship)
 
     return relationships
 
@@ -400,7 +405,8 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
                                             eval_set.append(sample)
 
                                     else:
-                                        # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+                                        if rel_label == "label":
+                                            show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
 
                                         # Add example and counter-example
                                         eval_set.append(sample)

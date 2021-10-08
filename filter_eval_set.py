@@ -184,7 +184,7 @@ class EvalSetFilter(QWidget):
                     round(bb[2] * pixmap.width()),
                     round(bb[3] * pixmap.height()),
                 )
-                label = relationship.Label1 + f" ({relationship.Label2})"
+                label = f"{relationship.Label1} {relationship.label} {relationship.Label2}"
                 self.painterInstance.setPen(penWhite)
                 self.painterInstance.drawText(
                     round(bb[0] * pixmap.width()), round(bb[1] * pixmap.height()), label
