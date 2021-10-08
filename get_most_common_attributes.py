@@ -1,3 +1,4 @@
+import os
 from collections import Counter
 import pandas as pd
 from tqdm import tqdm
@@ -24,7 +25,7 @@ def get_most_common_attributes():
     relationship_names.update(attribute_names_overlap)
     relationship_names = relationship_names.append(attribute_names_new)
 
-    relationships = pd.read_csv("data/oidv6-test-annotations-vrd.csv")
+    relationships = pd.read_csv(os.path.expanduser("~/data/open_images/oidv6-train-annotations-vrd.csv"))
     relationships.reset_index(drop=True, inplace=True)
 
     relationships["LabelName1"] = relationships.apply(
@@ -34,9 +35,17 @@ def get_most_common_attributes():
         lambda x: relationship_names.loc[x[2].strip()].DisplayName, axis=1
     )
 
-    print(Counter(relationships["LabelName1"].values).most_common())
-    print(Counter(relationships["LabelName2"].values).most_common())
-    print(Counter(relationships["RelationshipLabel"].values).most_common())
+    nouns_counter = Counter(relationships["LabelName1"].values)
+    print(nouns_counter.most_common())
+    pd.DataFrame(nouns_counter).to_csv("data/noun_occurrences.csv", index=False, header=False)
+
+    obj_counter = Counter(relationships["LabelName2"].values)
+    print(obj_counter.most_common())
+    pd.DataFrame(obj_counter).to_csv("data/obj_occurrences.csv", index=False, header=False)
+
+    rel_counter = Counter(relationships["RelationshipLabel"].values)
+    print(rel_counter.most_common())
+    pd.DataFrame(rel_counter).to_csv("data/rel_occurrences.csv", index=False, header=False)
 
     attributes_persons = Counter(
         relationships[
@@ -45,9 +54,10 @@ def get_most_common_attributes():
     ).most_common()
     print(f"Most common attributes for persons: {attributes_persons}")
 
-    relationships.to_csv("results/relationships_test_display_names.csv")
+    relationships.to_csv("results/relationships_train_display_names.csv")
 
     # Find nouns that can be both subject and object of a relationship
+    print("Looking for nouns that can be both subject and object: ")
     subj_and_obj = set(relationships["LabelName2"].values) & set(
         relationships["LabelName1"].values
     )
@@ -63,7 +73,7 @@ def get_most_common_attributes():
             print(overlapping_rel)
             subj_and_obj_filtered.add(noun)
 
-    print(subj_and_obj_filtered)
+    print("Summary: ", subj_and_obj_filtered)
 
 
 if __name__ == "__main__":
