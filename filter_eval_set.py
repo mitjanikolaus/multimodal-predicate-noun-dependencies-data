@@ -184,7 +184,9 @@ class EvalSetFilter(QWidget):
                     round(bb[2] * pixmap.width()),
                     round(bb[3] * pixmap.height()),
                 )
-                label = f"{relationship.Label1} {relationship.label} {relationship.Label2}"
+                label = (
+                    f"{relationship.Label1} {relationship.label} {relationship.Label2}"
+                )
                 self.painterInstance.setPen(penWhite)
                 self.painterInstance.drawText(
                     round(bb[0] * pixmap.width()), round(bb[1] * pixmap.height()), label
@@ -206,34 +208,42 @@ class EvalSetFilter(QWidget):
 
     def sample_already_processed(self, sample):
         """Return true if either example or counterexample already exist in the filtered or rejected samples"""
+        rel_label = sample["rel_label"]
 
         def relationships_are_equal(s1, s2):
             return (
                 s1["relationship_target"].Label1
                 in SYNONYMS[s2["relationship_target"].Label1]
-                and s1["relationship_target"].Label2
-                in SYNONYMS[s2["relationship_target"].Label2]
+                and s1["relationship_target"][rel_label]
+                in SYNONYMS[s2["relationship_target"][rel_label]]
                 and s1["counterexample_relationship_target"].Label1
                 in SYNONYMS[s2["counterexample_relationship_target"].Label1]
-                and s1["counterexample_relationship_target"].Label2
-                in SYNONYMS[s2["counterexample_relationship_target"].Label2]
+                and s1["counterexample_relationship_target"][rel_label]
+                in SYNONYMS[s2["counterexample_relationship_target"][rel_label]]
             )
 
         for s in self.eval_sets_filtered[self.eval_set_key]:
             if (
                 s["img_example"] == sample["img_example"]
                 or s["img_counterexample"] == sample["img_counterexample"]
+                or s["img_example"] == sample["img_counterexample"]
             ):
                 if relationships_are_equal(s, sample):
                     return True
 
         for s in self.eval_sets_rejected_examples[self.eval_set_key]:
-            if s["img_example"] == sample["img_example"]:
+            if (
+                s["img_example"] == sample["img_example"]
+                or s["img_example"] == sample["img_counterexample"]
+            ):
                 if relationships_are_equal(s, sample):
                     return True
 
         for s in self.eval_sets_rejected_counterexamples[self.eval_set_key]:
-            if s["img_counterexample"] == sample["img_counterexample"]:
+            if (
+                s["img_counterexample"] == sample["img_counterexample"]
+                or s["img_counterexample"] == sample["img_example"]
+            ):
                 if relationships_are_equal(s, sample):
                     return True
 
@@ -306,9 +316,7 @@ class EvalSetFilter(QWidget):
 def parse_args():
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
-        "--input-file",
-        type=str,
-        required=True,
+        "--input-file", type=str, required=True,
     )
 
     args = argparser.parse_args()
