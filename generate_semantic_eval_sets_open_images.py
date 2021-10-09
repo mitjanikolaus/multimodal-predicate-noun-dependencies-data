@@ -12,10 +12,10 @@ from tqdm import tqdm
 
 from utils import (
     SYNONYMS,
-    NOUN_TUPLES,
     OBJECTS_TUPLES,
     VALID_NAMES,
-    RELATIONSHIPS_TUPLES, RELATIONSHIPS_SPATIAL,
+    RELATIONSHIPS_TUPLES,
+    RELATIONSHIPS_SPATIAL,
 )
 
 # Threshold for overlap of 2 bounding boxes
@@ -220,8 +220,14 @@ def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label)
                 ):
                     if relationship_is_sharp(sample, relationship):
                         # For spatial relationships we require also the object to be the same
-                        if relationship[rel_label] in RELATIONSHIPS_SPATIAL:
-                            if relationship["Label2"] in SYNONYMS[relationship_target["Label2"]]:
+                        if (
+                            relationship[rel_label] in RELATIONSHIPS_SPATIAL
+                            or relationship_target[rel_label] in RELATIONSHIPS_SPATIAL
+                        ):
+                            if (
+                                relationship["Label2"]
+                                in SYNONYMS[relationship_target["Label2"]]
+                            ):
                                 relationships.append(relationship)
                         else:
                             relationships.append(relationship)
@@ -241,7 +247,18 @@ def find_subj_with_other_rel(sample, subject, relationship_target, rel_label):
                 relationship.bounding_box, relationship_target.bounding_box
             ):
                 if relationship_is_sharp(sample, relationship):
-                    relationships.append(relationship)
+                    # For spatial relationships we require also the object to be the same
+                    if (
+                        relationship[rel_label] in RELATIONSHIPS_SPATIAL
+                        or relationship_target[rel_label] in RELATIONSHIPS_SPATIAL
+                    ):
+                        if (
+                            relationship["Label2"]
+                            in SYNONYMS[relationship_target["Label2"]]
+                        ):
+                            relationships.append(relationship)
+                    else:
+                        relationships.append(relationship)
 
     return relationships
 
@@ -333,6 +350,17 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
                         is_counterexample_relation = F("Label1").is_in(
                             SYNONYMS[distractor_noun]
                         ) & F(rel_label).is_in(SYNONYMS[relationship_target[rel_label]])
+                        # For spatial relationships we require also the object to be the same
+                        if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
+                            is_counterexample_relation = (
+                                F("Label1").is_in(SYNONYMS[distractor_noun])
+                                & F(rel_label).is_in(
+                                    SYNONYMS[relationship_target[rel_label]]
+                                )
+                                & F("Label2").is_in(
+                                    SYNONYMS[relationship_target["Label2"]]
+                                )
+                            )
                         matching_images_counterexample = matching_images.match(
                             F("relationships.detections")
                             .filter(is_counterexample_relation & is_big_enough)
@@ -485,11 +513,11 @@ def generate_eval_sets_from_rel_or_object_tuples(
                     ).is_in(SYNONYMS[distractor_attribute])
                     # For spatial relationships we require also the object to be the same
                     if distractor_attribute in RELATIONSHIPS_SPATIAL:
-                        is_counterex_rel = F("Label1").is_in(SYNONYMS[target_noun]) & F(
-                            rel_label
-                        ).is_in(SYNONYMS[distractor_attribute]) & F(
-                            "Label2"
-                        ).is_in(SYNONYMS[relationship_target["Label2"]])
+                        is_counterex_rel = (
+                            F("Label1").is_in(SYNONYMS[target_noun])
+                            & F(rel_label).is_in(SYNONYMS[distractor_attribute])
+                            & F("Label2").is_in(SYNONYMS[relationship_target["Label2"]])
+                        )
                     matching_images_counterexample = matching_images.match(
                         F("relationships.detections")
                         .filter(is_counterex_rel & is_big_enough)
