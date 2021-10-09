@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 from utils import (
     SYNONYMS,
+    NOUN_TUPLES,
     OBJECTS_TUPLES,
     VALID_NAMES,
     RELATIONSHIPS_TUPLES,
