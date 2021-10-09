@@ -418,6 +418,7 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
                                         "relationship_visual_distractor": rel_visual_distractor,
                                         "counterexample_relationship_target": counterex_rel_target,
                                         "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
+                                        "rel_label": rel_label,
                                     }
                                     duplicate_sample = get_duplicate_sample(
                                         sample, eval_set, rel_label
@@ -570,6 +571,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
                                     "relationship_visual_distractor": rel_visual_distractor,
                                     "counterexample_relationship_target": counterex_rel_target,
                                     "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
+                                    "rel_label": rel_label,
                                 }
                                 duplicate_sample = get_duplicate_sample(
                                     sample, eval_set, rel_label
