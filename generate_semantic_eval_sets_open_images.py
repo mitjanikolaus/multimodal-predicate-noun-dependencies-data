@@ -405,8 +405,7 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
                                             eval_set.append(sample)
 
                                     else:
-                                        if rel_label == "label":
-                                            show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+                                        # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
 
                                         # Add example and counter-example
                                         eval_set.append(sample)
