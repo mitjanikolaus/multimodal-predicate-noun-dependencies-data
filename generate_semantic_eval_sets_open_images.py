@@ -284,7 +284,9 @@ def get_duplicate_sample(sample, eval_set, rel_label):
     return None
 
 
-def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_name):
+def generate_eval_sets_from_noun_tuples(
+    noun_tuples, split, max_samples, file_name, check_sharpness
+):
     eval_sets = {}
 
     dataset = foz.load_zoo_dataset(
@@ -346,7 +348,7 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
                     )
 
                     for rel_visual_distractor in rels_visual_distractor:
-                        if relationships_are_sharp(
+                        if not check_sharpness or relationships_are_sharp(
                             example, [relationship_target, rel_visual_distractor],
                         ):
 
@@ -415,12 +417,15 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
                                     for (
                                         counterex_rel_visual_distractor
                                     ) in counterexample_rels_visual_distractor:
-                                        if relationships_are_sharp(
-                                            counterexample,
-                                            [
-                                                counterex_rel_target,
-                                                counterex_rel_visual_distractor,
-                                            ],
+                                        if (
+                                            not check_sharpness
+                                            or relationships_are_sharp(
+                                                counterexample,
+                                                [
+                                                    counterex_rel_target,
+                                                    counterex_rel_visual_distractor,
+                                                ],
+                                            )
                                         ):
 
                                             sample = {
@@ -463,7 +468,7 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
 
 
 def generate_eval_sets_from_rel_or_object_tuples(
-    tuples, rel_label, split, max_samples, file_name
+    tuples, rel_label, split, max_samples, file_name, check_sharpness
 ):
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
@@ -520,7 +525,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
                 rels_visual_distractor = drop_synonyms(rels_visual_distractor, "Label1")
 
                 for rel_visual_distractor in rels_visual_distractor:
-                    if relationships_are_sharp(
+                    if not check_sharpness or relationships_are_sharp(
                         example, [relationship_target, rel_visual_distractor],
                     ):
 
@@ -580,7 +585,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
                                 for (
                                     counterex_rel_visual_distractor
                                 ) in counterex_rels_visual_distractor:
-                                    if relationships_are_sharp(
+                                    if not check_sharpness or relationships_are_sharp(
                                         counterexample,
                                         [
                                             counterex_rel_target,
@@ -643,6 +648,7 @@ def parse_args():
     argparser.add_argument(
         "--max-samples", type=int, default=None,
     )
+    argparser.add_argument("--check-sharpness", default=False, action="store_true")
 
     args = argparser.parse_args()
 
@@ -653,22 +659,47 @@ if __name__ == "__main__":
     args = parse_args()
 
     if args.eval_set == "noun_tuples":
-        file_name = f"results/noun-{args.split}-{args.max_samples}.p"
+        if args.check_sharpness:
+            file_name = f"results/noun-{args.split}-{args.max_samples}.p"
+        else:
+            file_name = (
+                f"results/noun-{args.split}-{args.max_samples}_no_sharpness_check.p"
+            )
         eval_sets_based_on_nouns = generate_eval_sets_from_noun_tuples(
-            NOUN_TUPLES, args.split, args.max_samples, file_name
+            NOUN_TUPLES, args.split, args.max_samples, file_name, args.check_sharpness
         )
         pickle.dump(eval_sets_based_on_nouns, open(file_name, "wb"))
 
     elif args.eval_set == "object_tuples":
-        file_name = f"results/object-{args.split}-{args.max_samples}.p"
+        if args.check_sharpness:
+            file_name = f"results/object-{args.split}-{args.max_samples}.p"
+        else:
+            file_name = (
+                f"results/object-{args.split}-{args.max_samples}_no_sharpness_check.p"
+            )
         eval_sets = generate_eval_sets_from_rel_or_object_tuples(
-            OBJECTS_TUPLES, "Label2", args.split, args.max_samples, file_name
+            OBJECTS_TUPLES,
+            "Label2",
+            args.split,
+            args.max_samples,
+            file_name,
+            args.check_sharpness,
         )
         pickle.dump(eval_sets, open(file_name, "wb"))
 
     elif args.eval_set == "relationship_tuples":
-        file_name = f"results/rel-{args.split}-{args.max_samples}.p"
+        if args.check_sharpness:
+            file_name = f"results/rel-{args.split}-{args.max_samples}.p"
+        else:
+            file_name = (
+                f"results/rel-{args.split}-{args.max_samples}_no_sharpness_check.p"
+            )
         eval_sets = generate_eval_sets_from_rel_or_object_tuples(
-            RELATIONSHIPS_TUPLES, "label", args.split, args.max_samples, file_name
+            RELATIONSHIPS_TUPLES,
+            "label",
+            args.split,
+            args.max_samples,
+            file_name,
+            args.check_sharpness,
         )
         pickle.dump(eval_sets, open(file_name, "wb"))
