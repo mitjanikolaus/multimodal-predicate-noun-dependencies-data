@@ -87,12 +87,15 @@ def get_sharpness_quotient_of_bounding_box(img_data, bb):
     return sharpness_quotient
 
 
-def relationship_is_sharp(sample, relationship):
+def relationships_are_sharp(sample, relationships):
     img_data = PIL_Image.open(sample.filepath)
-    sharpness_quotient = get_sharpness_quotient_of_bounding_box(
-        img_data, relationship.bounding_box
-    )
-    return sharpness_quotient > THRESHOLD_MIN_BOUNDING_BOX_SHARPNESS
+    for relationship in relationships:
+        sharpness_quotient = get_sharpness_quotient_of_bounding_box(
+            img_data, relationship.bounding_box
+        )
+        if sharpness_quotient <= THRESHOLD_MIN_BOUNDING_BOX_SHARPNESS:
+            return False
+    return True
 
 
 def show_image_pair(
@@ -219,19 +222,18 @@ def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label)
                 if not high_bounding_box_overlap(
                     relationship.bounding_box, relationship_target.bounding_box
                 ):
-                    if relationship_is_sharp(sample, relationship):
-                        # For spatial relationships we require also the object to be the same
+                    # For spatial relationships we require also the object to be the same
+                    if (
+                        relationship[rel_label] in RELATIONSHIPS_SPATIAL
+                        or relationship_target[rel_label] in RELATIONSHIPS_SPATIAL
+                    ):
                         if (
-                            relationship[rel_label] in RELATIONSHIPS_SPATIAL
-                            or relationship_target[rel_label] in RELATIONSHIPS_SPATIAL
+                            relationship["Label2"]
+                            in SYNONYMS[relationship_target["Label2"]]
                         ):
-                            if (
-                                relationship["Label2"]
-                                in SYNONYMS[relationship_target["Label2"]]
-                            ):
-                                relationships.append(relationship)
-                        else:
                             relationships.append(relationship)
+                    else:
+                        relationships.append(relationship)
 
     return relationships
 
@@ -247,19 +249,18 @@ def find_subj_with_other_rel(sample, subject, relationship_target, rel_label):
             if not high_bounding_box_overlap(
                 relationship.bounding_box, relationship_target.bounding_box
             ):
-                if relationship_is_sharp(sample, relationship):
-                    # For spatial relationships we require also the object to be the same
+                # For spatial relationships we require also the object to be the same
+                if (
+                    relationship[rel_label] in RELATIONSHIPS_SPATIAL
+                    or relationship_target[rel_label] in RELATIONSHIPS_SPATIAL
+                ):
                     if (
-                        relationship[rel_label] in RELATIONSHIPS_SPATIAL
-                        or relationship_target[rel_label] in RELATIONSHIPS_SPATIAL
+                        relationship["Label2"]
+                        in SYNONYMS[relationship_target["Label2"]]
                     ):
-                        if (
-                            relationship["Label2"]
-                            in SYNONYMS[relationship_target["Label2"]]
-                        ):
-                            relationships.append(relationship)
-                    else:
                         relationships.append(relationship)
+                else:
+                    relationships.append(relationship)
 
     return relationships
 
@@ -326,7 +327,6 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
                     for rel in example.relationships.detections
                     if rel.Label1 in SYNONYMS[target_noun]
                     and rel[rel_label] in VALID_NAMES[rel_label]
-                    and relationship_is_sharp(example, rel)
                     and not is_subj_rel_in_image(
                         example, distractor_noun, rel[rel_label], rel_label
                     )  # check that distractor IS NOT in same image
@@ -387,7 +387,6 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
                                 if rel.Label1 in SYNONYMS[distractor_noun]
                                 and rel[rel_label]
                                 in SYNONYMS[relationship_target[rel_label]]
-                                and relationship_is_sharp(counterexample, rel)
                             ]
                             counterexample_possible_relationships = drop_synonyms(
                                 counterexample_possible_relationships, rel_label,
@@ -411,34 +410,46 @@ def generate_eval_sets_from_noun_tuples(noun_tuples, split, max_samples, file_na
                                 for (
                                     counterex_rel_visual_distractor
                                 ) in counterexample_rels_visual_distractor:
-                                    sample = {
-                                        "img_example": example.filepath,
-                                        "img_counterexample": counterexample.filepath,
-                                        "relationship_target": relationship_target,
-                                        "relationship_visual_distractor": rel_visual_distractor,
-                                        "counterexample_relationship_target": counterex_rel_target,
-                                        "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
-                                        "rel_label": rel_label,
-                                    }
-                                    duplicate_sample = get_duplicate_sample(
-                                        sample, eval_set, rel_label
-                                    )
+                                    # check that bounding boxes are sharp:
+                                    if relationships_are_sharp(
+                                        example,
+                                        [relationship_target, rel_visual_distractor],
+                                    ) and relationships_are_sharp(
+                                        counterexample,
+                                        [
+                                            counterex_rel_target,
+                                            counterex_rel_visual_distractor,
+                                        ],
+                                    ):
 
-                                    # Replace current sample if new one has bigger objects
-                                    if duplicate_sample is not None:
-                                        if get_sum_of_bounding_box_sizes(
-                                            sample
-                                        ) > get_sum_of_bounding_box_sizes(
-                                            duplicate_sample
-                                        ):
-                                            eval_set.remove(duplicate_sample)
+                                        sample = {
+                                            "img_example": example.filepath,
+                                            "img_counterexample": counterexample.filepath,
+                                            "relationship_target": relationship_target,
+                                            "relationship_visual_distractor": rel_visual_distractor,
+                                            "counterexample_relationship_target": counterex_rel_target,
+                                            "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
+                                            "rel_label": rel_label,
+                                        }
+                                        duplicate_sample = get_duplicate_sample(
+                                            sample, eval_set, rel_label
+                                        )
+
+                                        # Replace current sample if new one has bigger objects
+                                        if duplicate_sample is not None:
+                                            if get_sum_of_bounding_box_sizes(
+                                                sample
+                                            ) > get_sum_of_bounding_box_sizes(
+                                                duplicate_sample
+                                            ):
+                                                eval_set.remove(duplicate_sample)
+                                                eval_set.append(sample)
+
+                                        else:
+                                            # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+
+                                            # Add example and counter-example
                                             eval_set.append(sample)
-
-                                    else:
-                                        # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
-
-                                        # Add example and counter-example
-                                        eval_set.append(sample)
         if len(eval_set) > 0:
             eval_sets[target_tuple] = eval_set
             print("saving intermediate results..")
@@ -492,7 +503,6 @@ def generate_eval_sets_from_rel_or_object_tuples(
                 rel
                 for rel in example.relationships.detections
                 if rel[rel_label] in SYNONYMS[target_attribute]
-                and relationship_is_sharp(example, rel)
                 and not is_subj_rel_in_image(
                     example, rel.Label1, distractor_attribute, rel_label
                 )  # check that distractor IS NOT in same image
@@ -543,7 +553,6 @@ def generate_eval_sets_from_rel_or_object_tuples(
                             for rel in counterexample.relationships.detections
                             if rel.Label1 in SYNONYMS[target_noun]
                             and rel[rel_label] in SYNONYMS[distractor_attribute]
-                            and relationship_is_sharp(counterexample, rel)
                         ]
                         counterexample_relationships = drop_synonyms(
                             counterexample_relationships, "Label1",
@@ -564,31 +573,41 @@ def generate_eval_sets_from_rel_or_object_tuples(
                             for (
                                 counterex_rel_visual_distractor
                             ) in counterex_rels_visual_distractor:
-                                sample = {
-                                    "img_example": example.filepath,
-                                    "img_counterexample": counterexample.filepath,
-                                    "relationship_target": relationship_target,
-                                    "relationship_visual_distractor": rel_visual_distractor,
-                                    "counterexample_relationship_target": counterex_rel_target,
-                                    "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
-                                    "rel_label": rel_label,
-                                }
-                                duplicate_sample = get_duplicate_sample(
-                                    sample, eval_set, rel_label
-                                )
+                                if relationships_are_sharp(
+                                    example,
+                                    [relationship_target, rel_visual_distractor],
+                                ) and relationships_are_sharp(
+                                    counterexample,
+                                    [
+                                        counterex_rel_target,
+                                        counterex_rel_visual_distractor,
+                                    ],
+                                ):
+                                    sample = {
+                                        "img_example": example.filepath,
+                                        "img_counterexample": counterexample.filepath,
+                                        "relationship_target": relationship_target,
+                                        "relationship_visual_distractor": rel_visual_distractor,
+                                        "counterexample_relationship_target": counterex_rel_target,
+                                        "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
+                                        "rel_label": rel_label,
+                                    }
+                                    duplicate_sample = get_duplicate_sample(
+                                        sample, eval_set, rel_label
+                                    )
 
-                                # Replace current sample if new one has bigger objects
-                                if duplicate_sample is not None:
-                                    if get_sum_of_bounding_box_sizes(
-                                        sample
-                                    ) > get_sum_of_bounding_box_sizes(duplicate_sample):
-                                        eval_set.remove(duplicate_sample)
+                                    # Replace current sample if new one has bigger objects
+                                    if duplicate_sample is not None:
+                                        if get_sum_of_bounding_box_sizes(
+                                            sample
+                                        ) > get_sum_of_bounding_box_sizes(duplicate_sample):
+                                            eval_set.remove(duplicate_sample)
+                                            eval_set.append(sample)
+                                    else:
+                                        # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+
+                                        # Add tuple of example and counter-example
                                         eval_set.append(sample)
-                                else:
-                                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
-
-                                    # Add tuple of example and counter-example
-                                    eval_set.append(sample)
 
         if len(eval_set) > 0:
             eval_sets[target_tuple] = eval_set
