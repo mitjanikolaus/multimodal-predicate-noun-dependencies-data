@@ -1,6 +1,5 @@
 import argparse
 import pickle
-from time import time
 
 from fiftyone import ViewField as F
 import fiftyone.zoo as foz
@@ -21,7 +20,6 @@ from utils import (
     VALID_NAMES,
     RELATIONSHIPS_TUPLES,
     RELATIONSHIPS_SPATIAL,
-    log_time,
 )
 
 # Threshold for overlap of 2 bounding boxes
@@ -93,7 +91,6 @@ def get_sharpness_quotient_of_bounding_box(img_data, bb):
 
 
 def relationships_are_sharp(sample, relationships):
-    # log_time(f"START Checking relationship sharpness")
 
     img_data = PIL_Image.open(sample.filepath)
     for relationship in relationships:
@@ -101,9 +98,7 @@ def relationships_are_sharp(sample, relationships):
             img_data, relationship.bounding_box
         )
         if sharpness_quotient <= THRESHOLD_MIN_BOUNDING_BOX_SHARPNESS:
-            # log_time(f"Checked relationship sharpness")
             return False
-    # log_time(f"Checked relationship sharpness")
     return True
 
 
@@ -283,12 +278,12 @@ def get_duplicate_sample(sample, eval_set, rel_label):
             # For spatial relationships we require also the object to be the same
             if rel_label in RELATIONSHIPS_SPATIAL:
                 if (
-                        existing_sample["relationship_target"].Label1
-                        == sample["relationship_target"].Label1
-                        and existing_sample["relationship_target"][rel_label]
-                        == sample["relationship_target"][rel_label]
-                        and existing_sample["relationship_target"][OBJECT]
-                        == sample["relationship_target"][OBJECT]
+                    existing_sample["relationship_target"].Label1
+                    == sample["relationship_target"].Label1
+                    and existing_sample["relationship_target"][rel_label]
+                    == sample["relationship_target"][rel_label]
+                    and existing_sample["relationship_target"][OBJECT]
+                    == sample["relationship_target"][OBJECT]
                 ):
                     return existing_sample
             else:
@@ -340,7 +335,6 @@ def get_counterexample_images(
         )
         & (F("relationships.detections").filter(is_example_relation).length() == 0)
     )
-    # log_time(f"Finished computing matching samples (counterexample)")
 
     return matching_images_counterexample
 
@@ -356,9 +350,6 @@ def get_counterexample_key(relationship_target, rel_label):
 def generate_eval_sets_from_subject_tuples(
     subject_tuples, split, max_samples, file_name, check_sharpness
 ):
-    # start_time = time()
-    # log_time("Start generate eval_sets")
-
     eval_sets = {}
 
     dataset = foz.load_zoo_dataset(
@@ -371,7 +362,6 @@ def generate_eval_sets_from_subject_tuples(
 
     for target_tuple in subject_tuples:
         print("Looking for: ", target_tuple)
-        # log_time(f"Start looking for: {target_tuple}")
 
         eval_set = []
         counterexample_cache = {}
@@ -396,11 +386,7 @@ def generate_eval_sets_from_subject_tuples(
             )
         )
 
-        # log_time(f"Computed matching samples")
-
         for example in tqdm(matching_images):
-            # log_time(f"Start with example")
-
             # Look for relationships both based on REL and on OBJECT (label and Label2)
             for rel_label in [REL, OBJECT]:
                 possible_relationships = [
@@ -417,8 +403,6 @@ def generate_eval_sets_from_subject_tuples(
                 )
 
                 for relationship_target in possible_relationships:
-                    # log_time(f"Start with relationship_target")
-
                     # check that visual distractor IS in image
                     rels_visual_distractor = find_subj_with_other_rel(
                         example, distractor_subject, relationship_target, rel_label
@@ -427,8 +411,6 @@ def generate_eval_sets_from_subject_tuples(
                         rels_visual_distractor, rel_label
                     )
                     if len(rels_visual_distractor) > 0:
-
-                        # log_time(f"Start with rel_visual_distractor")
 
                         if not check_sharpness or relationships_are_sharp(
                             example, [relationship_target],
@@ -453,7 +435,6 @@ def generate_eval_sets_from_subject_tuples(
                             ]
 
                             for counterexample in matching_images_counterexample:
-                                # log_time(f"Start counterexample")
 
                                 counterexample_possible_relationships = [
                                     rel
@@ -469,7 +450,6 @@ def generate_eval_sets_from_subject_tuples(
                                 for (
                                     counterex_rel_target
                                 ) in counterexample_possible_relationships:
-                                    # log_time(f"Start counterex_rel_target")
 
                                     # check that visual distractor IS in image
                                     counterexample_rels_visual_distractor = find_subj_with_other_rel(
@@ -488,9 +468,6 @@ def generate_eval_sets_from_subject_tuples(
                                             for (
                                                 counterex_rel_visual_distractor
                                             ) in counterexample_rels_visual_distractor:
-                                                # log_time(
-                                                #     f"Start counterexample_rels_visual_distractor"
-                                                # )
 
                                                 if not check_sharpness or (
                                                     relationships_are_sharp(
@@ -518,7 +495,6 @@ def generate_eval_sets_from_subject_tuples(
                                                     duplicate_sample = get_duplicate_sample(
                                                         sample, eval_set, rel_label
                                                     )
-                                                    # log_time(f"Ready to add sample")
 
                                                     # Replace current sample if new one has bigger objects
                                                     if duplicate_sample is not None:
@@ -531,16 +507,11 @@ def generate_eval_sets_from_subject_tuples(
                                                                 duplicate_sample
                                                             )
                                                             eval_set.append(sample)
-                                                            # log_time(f"Added sample")
-                                                        # else:
-                                                        #     log_time(f"Didn't add sample")
 
                                                     else:
-                                                        # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
-
                                                         # Add example and counter-example
                                                         eval_set.append(sample)
-                                                        # log_time(f"Added sample")
+                                                        # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
 
         if len(eval_set) > 0:
             eval_sets[target_tuple] = eval_set
@@ -549,8 +520,6 @@ def generate_eval_sets_from_subject_tuples(
             print(
                 f"\nFound {len(eval_sets[target_tuple])} examples for {target_tuple}.\n"
             )
-
-    # log_time("End generate eval_sets", start_time)
 
     return eval_sets
 
