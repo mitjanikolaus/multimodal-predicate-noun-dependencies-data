@@ -1,5 +1,6 @@
 import argparse
 import pickle
+from time import time
 
 from fiftyone import ViewField as F
 import fiftyone.zoo as foz
@@ -20,6 +21,10 @@ from utils import (
     VALID_NAMES,
     RELATIONSHIPS_TUPLES,
     RELATIONSHIPS_SPATIAL,
+    RELATIONSHIPS,
+    BOUNDING_BOX,
+    log_time,
+    IMAGE_RELATIONSHIPS,
 )
 
 # Threshold for overlap of 2 bounding boxes
@@ -304,8 +309,8 @@ def get_counterexample_images(
     is_counterexample_relation = F(SUBJECT).is_in(SYNONYMS[distractor_subject]) & F(
         rel_label
     ).is_in(SYNONYMS[relationship_target[rel_label]])
-    is_big_enough = (F("bounding_box")[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
-        F("bounding_box")[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
+    is_big_enough = (F(BOUNDING_BOX)[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
+        F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
     )
     # For spatial relationships we require also the object to be the same
     if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
@@ -328,12 +333,12 @@ def get_counterexample_images(
 
     matching_images_counterexample = matching_images_general.match(
         (
-            F("relationships.detections")
+            F(IMAGE_RELATIONSHIPS)
             .filter(is_counterexample_relation & is_big_enough)
             .length()
             > 0
         )
-        & (F("relationships.detections").filter(is_example_relation).length() == 0)
+        & (F(IMAGE_RELATIONSHIPS).filter(is_example_relation).length() == 0)
     )
 
     return matching_images_counterexample
@@ -370,18 +375,13 @@ def generate_eval_sets_from_subject_tuples(
         # Compute matching images
         is_target = F(SUBJECT).is_in(SYNONYMS[target_subject])
         is_distractor = F(SUBJECT).is_in(SYNONYMS[distractor_subject])
-        is_big_enough = (F("bounding_box")[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
-            F("bounding_box")[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
+        is_big_enough = (F(BOUNDING_BOX)[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
+            F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
         )
         matching_images = dataset.match(
-            (
-                F("relationships.detections").filter(is_target & is_big_enough).length()
-                > 0
-            )
+            (F(IMAGE_RELATIONSHIPS).filter(is_target & is_big_enough).length() > 0)
             & (
-                F("relationships.detections")
-                .filter(is_distractor & is_big_enough)
-                .length()
+                F(IMAGE_RELATIONSHIPS).filter(is_distractor & is_big_enough).length()
                 > 0
             )
         )
@@ -527,6 +527,7 @@ def generate_eval_sets_from_subject_tuples(
 def generate_eval_sets_from_rel_or_object_tuples(
     tuples, rel_label, split, max_samples, file_name
 ):
+    start = time()
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
         label_types=["relationships"],
@@ -545,18 +546,13 @@ def generate_eval_sets_from_rel_or_object_tuples(
         # Compute matching images
         is_target = F(rel_label).is_in(SYNONYMS[target_attribute])
         is_distractor = F(rel_label).is_in(SYNONYMS[distractor_attribute])
-        is_big_enough = (F("bounding_box")[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
-            F("bounding_box")[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
+        is_big_enough = (F(BOUNDING_BOX)[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
+            F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
         )
         matching_images = dataset.match(
-            (
-                F("relationships.detections").filter(is_target & is_big_enough).length()
-                > 0
-            )
+            (F(IMAGE_RELATIONSHIPS).filter(is_target & is_big_enough).length() > 0)
             & (
-                F("relationships.detections")
-                .filter(is_distractor & is_big_enough)
-                .length()
+                F(IMAGE_RELATIONSHIPS).filter(is_distractor & is_big_enough).length()
                 > 0
             )
         )
@@ -598,7 +594,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
                                 & F(OBJECT).is_in(SYNONYMS[relationship_target[OBJECT]])
                             )
                         matching_images_counterexample = matching_images.match(
-                            F("relationships.detections")
+                            F(IMAGE_RELATIONSHIPS)
                             .filter(is_counterex_rel & is_big_enough)
                             .length()
                             > 0
@@ -683,6 +679,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
                 f"Found {len(eval_sets[target_tuple])} examples for {target_tuple}.\n\n"
             )
 
+    log_time("End", start)
     return eval_sets
 
 
