@@ -148,7 +148,7 @@ OBJECTS_OTHERS_TUPLES = get_tuples_no_duplicates(OBJECTS_OTHERS)
 OBJECTS_TUPLES = OBJECTS_OTHERS_TUPLES + OBJECTS_TEXTURES_TUPLES
 
 # Nouns (Label1)
-NOUNS_FRUITS = [
+SUBJECTS_FRUITS = [
     "Orange",
     "Strawberry",
     "Lemon",
@@ -156,15 +156,15 @@ NOUNS_FRUITS = [
     "Coconut",
 ]
 
-NOUNS_ACCESSORIES = ["Handbag", "Backpack", "Suitcase"]
+SUBJECTS_ACCESSORIES = ["Handbag", "Backpack", "Suitcase"]
 
-NOUNS_FURNITURE = ["Chair", "Table", "Sofa bed", "Bed", "Bench"]
+SUBJECTS_FURNITURE = ["Chair", "Table", "Sofa bed", "Bed", "Bench"]
 
-NOUNS_INSTRUMENTS = ["Piano", "Guitar", "Drum", "Violin"]
+SUBJECTS_INSTRUMENTS = ["Piano", "Guitar", "Drum", "Violin"]
 
-NOUNS_ANIMALS = ["Dog", "Cat"]
+SUBJECTS_ANIMALS = ["Dog", "Cat"]
 
-NOUNS_OTHERS = [
+SUBJECTS_OTHERS = [
     "Wine glass",
     "Cake",
     "Beer",
@@ -180,25 +180,25 @@ NOUNS_OTHERS = [
     "Spoon",
 ]
 
-NOUNS = (
-    NOUNS_OTHERS
-    + NOUNS_FURNITURE
-    + NOUNS_FRUITS
-    + NOUNS_ACCESSORIES
-    + NOUNS_INSTRUMENTS
-    + NOUNS_ANIMALS
+SUBJECTS = (
+    SUBJECTS_OTHERS
+    + SUBJECTS_FURNITURE
+    + SUBJECTS_FRUITS
+    + SUBJECTS_ACCESSORIES
+    + SUBJECTS_INSTRUMENTS
+    + SUBJECTS_ANIMALS
 )
 
-NOUNS_GENERAL_TUPLES = get_tuples_no_duplicates(NOUNS)
+SUBJECTS_GENERAL_TUPLES = get_tuples_no_duplicates(SUBJECTS)
 
-NOUNS_OTHERS_TUPLES = [
+SUBJECTS_OTHERS_TUPLES = [
     ("Man", "Woman"),
     ("Man", "Girl"),
     ("Woman", "Boy"),
     ("Girl", "Boy"),
 ]
 
-SUBJECT_TUPLES = NOUNS_GENERAL_TUPLES + NOUNS_OTHERS_TUPLES
+SUBJECT_TUPLES = SUBJECTS_GENERAL_TUPLES + SUBJECTS_OTHERS_TUPLES
 
 # Relationships (.label)
 RELATIONSHIPS_SPATIAL = ["at", "contain", "holds", "on", "hang", "inside_of", "under"]
@@ -228,10 +228,10 @@ RELATIONSHIPS_TUPLES = (
     + RELATIONSHIPS_OTHERS_TUPLES
 )
 
-nouns_counter = pd.read_csv(
-    "data/noun_occurrences.csv", index_col=None, header=None, names=["noun", "count"]
+subjects_counter = pd.read_csv(
+    "data/subject_occurrences.csv", index_col=None, header=None, names=["subject", "count"]
 )
-NOUN_NAMES = list(nouns_counter["noun"].values)
+SUBJECT_NAMES = list(subjects_counter["subject"].values)
 
 relationships_counter = pd.read_csv(
     "data/rel_occurrences.csv", index_col=None, header=None, names=["rel", "count"]
@@ -247,9 +247,9 @@ for obj1, obj2 in OBJECTS_TUPLES:
     assert obj1 in OBJECT_NAMES, f"{obj1} is misspelled"
     assert obj2 in OBJECT_NAMES, f"{obj2} is misspelled"
 
-for noun1, noun2 in SUBJECT_TUPLES:
-    assert noun1 in NOUN_NAMES, f"{noun1} is misspelled"
-    assert noun2 in NOUN_NAMES, f"{noun2} is misspelled"
+for subj1, subj2 in SUBJECT_TUPLES:
+    assert subj1 in SUBJECT_NAMES, f"{subj1} is misspelled"
+    assert subj2 in SUBJECT_NAMES, f"{subj2} is misspelled"
 
 SYNONYMS_LIST = [
     ["Table", "Desk", "Coffee table"],
@@ -266,7 +266,7 @@ SYNONYMS_LIST = [
     ["Tree", "Palm tree"]
 ]
 
-SYNONYMS = {name: [name] for name in NOUN_NAMES + OBJECT_NAMES + RELATIONSHIP_NAMES}
+SYNONYMS = {name: [name] for name in SUBJECT_NAMES + OBJECT_NAMES + RELATIONSHIP_NAMES}
 for synonyms in SYNONYMS_LIST:
     SYNONYMS.update({item: synonyms for item in synonyms})
 

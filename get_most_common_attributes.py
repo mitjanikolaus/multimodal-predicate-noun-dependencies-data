@@ -35,9 +35,9 @@ def get_most_common_attributes():
         lambda x: relationship_names.loc[x[2].strip()].DisplayName, axis=1
     )
 
-    nouns_counter = Counter(relationships["LabelName1"].values)
-    print(nouns_counter.most_common())
-    pd.DataFrame(nouns_counter).to_csv("data/noun_occurrences.csv", index=False, header=False)
+    subjects_counter = Counter(relationships["LabelName1"].values)
+    print(subjects_counter.most_common())
+    pd.DataFrame(subjects_counter).to_csv("data/subject_occurrences.csv", index=False, header=False)
 
     obj_counter = Counter(relationships["LabelName2"].values)
     print(obj_counter.most_common())

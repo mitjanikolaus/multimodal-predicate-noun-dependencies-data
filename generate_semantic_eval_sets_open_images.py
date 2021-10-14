@@ -280,13 +280,25 @@ def get_duplicate_sample(sample, eval_set, rel_label):
             existing_sample["img_example"] == sample["img_counterexample"]
             and existing_sample["img_counterexample"] == sample["img_example"]
         ):
-            if (
-                existing_sample["relationship_target"].Label1
-                == sample["relationship_target"].Label1
-                and existing_sample["relationship_target"][rel_label]
-                == sample["relationship_target"][rel_label]
-            ):
-                return existing_sample
+            # For spatial relationships we require also the object to be the same
+            if rel_label in RELATIONSHIPS_SPATIAL:
+                if (
+                        existing_sample["relationship_target"].Label1
+                        == sample["relationship_target"].Label1
+                        and existing_sample["relationship_target"][rel_label]
+                        == sample["relationship_target"][rel_label]
+                        and existing_sample["relationship_target"][OBJECT]
+                        == sample["relationship_target"][OBJECT]
+                ):
+                    return existing_sample
+            else:
+                if (
+                    existing_sample["relationship_target"].Label1
+                    == sample["relationship_target"].Label1
+                    and existing_sample["relationship_target"][rel_label]
+                    == sample["relationship_target"][rel_label]
+                ):
+                    return existing_sample
     return None
 
 
@@ -297,6 +309,9 @@ def get_counterexample_images(
     is_counterexample_relation = F(SUBJECT).is_in(SYNONYMS[distractor_subject]) & F(
         rel_label
     ).is_in(SYNONYMS[relationship_target[rel_label]])
+    is_big_enough = (F("bounding_box")[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
+        F("bounding_box")[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
+    )
     # For spatial relationships we require also the object to be the same
     if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
         is_counterexample_relation = (
@@ -317,7 +332,12 @@ def get_counterexample_images(
         )
 
     matching_images_counterexample = matching_images_general.match(
-        (F("relationships.detections").filter(is_counterexample_relation).length() > 0)
+        (
+            F("relationships.detections")
+            .filter(is_counterexample_relation & is_big_enough)
+            .length()
+            > 0
+        )
         & (F("relationships.detections").filter(is_example_relation).length() == 0)
     )
     # log_time(f"Finished computing matching samples (counterexample)")
@@ -325,7 +345,17 @@ def get_counterexample_images(
     return matching_images_counterexample
 
 
-def generate_eval_sets_from_subject_tuples(subject_tuples, split, max_samples, file_name, check_sharpness):
+def get_counterexample_key(relationship_target, rel_label):
+    if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
+        counterexample_key = f"{relationship_target[REL]}-{relationship_target[OBJECT]}"
+    else:
+        counterexample_key = f"{relationship_target[rel_label]}"
+    return counterexample_key
+
+
+def generate_eval_sets_from_subject_tuples(
+    subject_tuples, split, max_samples, file_name, check_sharpness
+):
     # start_time = time()
     # log_time("Start generate eval_sets")
 
@@ -371,7 +401,7 @@ def generate_eval_sets_from_subject_tuples(subject_tuples, split, max_samples, f
         for example in tqdm(matching_images):
             # log_time(f"Start with example")
 
-            # Choose on label or Label2
+            # Look for relationships both based on REL and on OBJECT (label and Label2)
             for rel_label in [REL, OBJECT]:
                 possible_relationships = [
                     rel
@@ -404,12 +434,10 @@ def generate_eval_sets_from_subject_tuples(subject_tuples, split, max_samples, f
                             example, [relationship_target],
                         ):
 
-                            if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
-                                counterexample_key = f"{relationship_target['label']}-{relationship_target['Label2']}"
-                            else:
-                                counterexample_key = f"{relationship_target[rel_label]}"
+                            counterexample_key = get_counterexample_key(
+                                relationship_target, rel_label
+                            )
 
-                            # if counterexample_key not in counterexample_cache:
                             if counterexample_key not in counterexample_cache:
                                 counterexample_cache[
                                     counterexample_key
@@ -454,8 +482,9 @@ def generate_eval_sets_from_subject_tuples(subject_tuples, split, max_samples, f
                                         counterexample_rels_visual_distractor, rel_label
                                     )
                                     if len(counterexample_rels_visual_distractor) > 0:
-
-                                        for rel_visual_distractor in rels_visual_distractor:
+                                        for (
+                                            rel_visual_distractor
+                                        ) in rels_visual_distractor:
                                             for (
                                                 counterex_rel_visual_distractor
                                             ) in counterexample_rels_visual_distractor:
@@ -463,12 +492,18 @@ def generate_eval_sets_from_subject_tuples(subject_tuples, split, max_samples, f
                                                 #     f"Start counterexample_rels_visual_distractor"
                                                 # )
 
-                                                if not check_sharpness or relationships_are_sharp(
-                                                    counterexample,
-                                                    [
-                                                        counterex_rel_target,
-                                                        counterex_rel_visual_distractor,
-                                                    ],
+                                                if not check_sharpness or (
+                                                    relationships_are_sharp(
+                                                        counterexample,
+                                                        [
+                                                            counterex_rel_target,
+                                                            counterex_rel_visual_distractor,
+                                                        ]
+                                                        and relationships_are_sharp(
+                                                            example,
+                                                            rel_visual_distractor,
+                                                        ),
+                                                    ),
                                                 ):
 
                                                     sample = {
@@ -492,7 +527,9 @@ def generate_eval_sets_from_subject_tuples(subject_tuples, split, max_samples, f
                                                         ) > get_sum_of_bounding_box_sizes(
                                                             duplicate_sample
                                                         ):
-                                                            eval_set.remove(duplicate_sample)
+                                                            eval_set.remove(
+                                                                duplicate_sample
+                                                            )
                                                             eval_set.append(sample)
                                                             # log_time(f"Added sample")
                                                         # else:
@@ -581,9 +618,9 @@ def generate_eval_sets_from_rel_or_object_tuples(
                     ):
 
                         # Start looking for counterexample image..
-                        is_counterex_rel = F(SUBJECT).is_in(SYNONYMS[target_subject]) & F(
-                            rel_label
-                        ).is_in(SYNONYMS[distractor_attribute])
+                        is_counterex_rel = F(SUBJECT).is_in(
+                            SYNONYMS[target_subject]
+                        ) & F(rel_label).is_in(SYNONYMS[distractor_attribute])
                         # For spatial relationships we require also the object to be the same
                         if distractor_attribute in RELATIONSHIPS_SPATIAL:
                             is_counterex_rel = (
@@ -710,7 +747,11 @@ if __name__ == "__main__":
     if args.eval_set == "subject_tuples":
         file_name = f"results/subject-{args.split}-{args.max_samples}.p"
         eval_sets_based_on_subjects = generate_eval_sets_from_subject_tuples(
-            SUBJECT_TUPLES, args.split, args.max_samples, file_name, args.check_sharpness
+            SUBJECT_TUPLES,
+            args.split,
+            args.max_samples,
+            file_name,
+            args.check_sharpness,
         )
         pickle.dump(eval_sets_based_on_subjects, open(file_name, "wb"))
 
