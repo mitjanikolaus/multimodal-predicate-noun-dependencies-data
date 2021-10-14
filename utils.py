@@ -2,6 +2,11 @@ import itertools
 
 import pandas as pd
 
+from time import time
+
+SUBJECT = "Label1"
+REL = "label"
+OBJECT = "Label2"
 
 def get_tuples_no_duplicates(names):
     all_tuples = [
@@ -193,7 +198,7 @@ NOUNS_OTHERS_TUPLES = [
     ("Girl", "Boy"),
 ]
 
-NOUN_TUPLES = NOUNS_GENERAL_TUPLES + NOUNS_OTHERS_TUPLES
+SUBJECT_TUPLES = NOUNS_GENERAL_TUPLES + NOUNS_OTHERS_TUPLES
 
 # Relationships (.label)
 RELATIONSHIPS_SPATIAL = ["at", "contain", "holds", "on", "hang", "inside_of", "under"]
@@ -242,7 +247,7 @@ for obj1, obj2 in OBJECTS_TUPLES:
     assert obj1 in OBJECT_NAMES, f"{obj1} is misspelled"
     assert obj2 in OBJECT_NAMES, f"{obj2} is misspelled"
 
-for noun1, noun2 in NOUN_TUPLES:
+for noun1, noun2 in SUBJECT_TUPLES:
     assert noun1 in NOUN_NAMES, f"{noun1} is misspelled"
     assert noun2 in NOUN_NAMES, f"{noun2} is misspelled"
 
@@ -266,3 +271,27 @@ for synonyms in SYNONYMS_LIST:
     SYNONYMS.update({item: synonyms for item in synonyms})
 
 VALID_NAMES = {"label": RELATIONSHIPS, "Label2": OBJECT_NAMES}
+
+REFERENCE_TIME = time()
+TIME_LOG_THRESHOLD = 0.1
+
+
+def log_time(message, reference_time=None):
+    if reference_time:
+        ref = reference_time
+    else:
+        global REFERENCE_TIME
+        ref = REFERENCE_TIME
+
+    current_time = time()
+    timedelta = current_time - ref
+
+    if timedelta > TIME_LOG_THRESHOLD:
+        line = "="*40
+        print(line)
+        print(f"{message} | Time passed: {timedelta:.1f}s")
+        print(line)
+        print()
+
+    if not reference_time:
+        REFERENCE_TIME = current_time
