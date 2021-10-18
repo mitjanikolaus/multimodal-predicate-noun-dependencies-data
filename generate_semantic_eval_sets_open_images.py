@@ -27,9 +27,9 @@ from utils import (
 # Threshold for overlap of 2 bounding boxes
 THRESHOLD_SAME_BOUNDING_BOX = 0.02
 
-# Bounding boxes of objects should be at least 10% of image in width and height
-THRESHOLD_MIN_BOUNDING_BOX_WIDTH = 0.1
-THRESHOLD_MIN_BOUNDING_BOX_HEIGHT = 0.1
+# Bounding boxes of objects should be at least 20% of image in width and height
+THRESHOLD_MIN_BOUNDING_BOX_WIDTH = 0.2
+THRESHOLD_MIN_BOUNDING_BOX_HEIGHT = 0.2
 
 # Bounding box sharpness quotient (relative to whole image)
 THRESHOLD_MIN_BOUNDING_BOX_SHARPNESS = 0.6
