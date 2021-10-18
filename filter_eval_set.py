@@ -28,7 +28,8 @@ class EvalSetFilter(QWidget):
         print("Processing: ", self.input_file)
         self.eval_sets = pickle.load(open(self.input_file, "rb"))
         for key, values in self.eval_sets.items():
-            print(f"{key}: {len(values)})")
+            if len(values) > 0:
+                print(f"{key}: {len(values)})")
 
         self.eval_sets_rejected_examples = {key: [] for key in self.eval_sets.keys()}
         self.eval_sets_rejected_counterexamples = {
@@ -46,8 +47,12 @@ class EvalSetFilter(QWidget):
             self.sample_index = 0
 
         self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
-        self.eval_set = self.eval_sets[self.eval_set_key]
 
+        while len(self.eval_sets[self.eval_set_key]) < 1:
+            self.eval_set_index += 1
+            self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
+
+        self.eval_set = self.eval_sets[self.eval_set_key]
         self.sample = self.eval_set[self.sample_index]
 
         grid = QGridLayout()
