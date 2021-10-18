@@ -301,7 +301,7 @@ class EvalSetFilter(QWidget):
     def save(self):
         file_name = self.input_file.replace(
             ".p",
-            f"_filtered_eval_set_{self.eval_set_index}_sample_{self.sample_index}.p",
+            f"_filtered_eval_set_{self.eval_set_index+1}_sample_{self.sample_index+1}.p",
         )
         pickle.dump(
             self.eval_sets_filtered, open(file_name, "wb",),
