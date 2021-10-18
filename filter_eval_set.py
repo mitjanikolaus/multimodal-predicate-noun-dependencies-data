@@ -1,6 +1,8 @@
 import argparse
+import os
 import pickle
 
+import fiftyone
 from PyQt5 import QtGui, QtCore
 import sys
 
@@ -156,7 +158,8 @@ class EvalSetFilter(QWidget):
         self.text_counterexample_filepath.setText(self.sample["img_counterexample"])
 
         for img in [sample["img_example"], sample["img_counterexample"]]:
-            pixmap = QtGui.QPixmap(img)
+            img_path = os.path.join(fiftyone.config.dataset_zoo_dir, img.split("fiftyone/")[1])
+            pixmap = QtGui.QPixmap(img_path)
             pixmap = pixmap.scaledToWidth(500)
 
             # create painter instance with pixmap
