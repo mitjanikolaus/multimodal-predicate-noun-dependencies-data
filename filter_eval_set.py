@@ -27,27 +27,27 @@ class EvalSetFilter(QWidget):
         self.input_file = args.input_file
         print("Processing: ", self.input_file)
         self.eval_sets = pickle.load(open(self.input_file, "rb"))
-
         for key, values in self.eval_sets.items():
             print(f"{key}: {len(values)})")
 
-        self.eval_sets_filtered = {key: [] for key in self.eval_sets.keys()}
         self.eval_sets_rejected_examples = {key: [] for key in self.eval_sets.keys()}
         self.eval_sets_rejected_counterexamples = {
             key: [] for key in self.eval_sets.keys()
         }
 
-        self.eval_set_index = 0
+        if args.continue_from:
+            print("Continuing from: ", args.continue_from)
+            self.eval_sets_filtered = pickle.load(open(args.continue_from, "rb"))
+            self.sample_index = int(args.continue_from.split("sample_")[1].split(".p")[0]) - 1
+            self.eval_set_index = int(args.continue_from.split("eval_set_")[1].split("_sample")[0]) - 1
+        else:
+            self.eval_sets_filtered = {key: [] for key in self.eval_sets.keys()}
+            self.eval_set_index = 0
+            self.sample_index = 0
+
         self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
-
-        while len(self.eval_sets[self.eval_set_key]) < 1:
-            self.eval_set_index += 1
-            self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
-
         self.eval_set = self.eval_sets[self.eval_set_key]
-        print(f"{self.eval_set_key} ({len(self.eval_set)} examples)")
 
-        self.sample_index = 0
         self.sample = self.eval_set[self.sample_index]
 
         grid = QGridLayout()
@@ -90,7 +90,6 @@ class EvalSetFilter(QWidget):
         )
         grid.addWidget(self.text_counterexample_filepath, 4, 1)
 
-        self.plot_sample(self.sample)
         self.pic_example.show()
         self.pic_counter_example.show()
         self.text_example_target.show()
@@ -127,6 +126,9 @@ class EvalSetFilter(QWidget):
         grid.addWidget(button_save, 8, 0, 1, 2)
 
         self.setWindowTitle("Filter eval set")
+
+        self.plot_sample(self.sample)
+
         self.show()
 
     def plot_sample(self, sample):
@@ -320,6 +322,9 @@ def parse_args():
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
         "--input-file", type=str, required=True,
+    )
+    argparser.add_argument(
+        "--continue-from", type=str, required=False,
     )
 
     args = argparser.parse_args()
