@@ -11,6 +11,7 @@ OBJECT = "Label2"
 IMAGE_RELATIONSHIPS = "relationships.detections"
 BOUNDING_BOX = "bounding_box"
 
+
 def get_tuples_no_duplicates(names):
     all_tuples = [
         (a1, a2) for a1, a2 in list(itertools.product(names, names)) if a1 != a2
