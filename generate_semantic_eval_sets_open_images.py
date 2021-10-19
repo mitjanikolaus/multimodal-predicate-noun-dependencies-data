@@ -27,12 +27,17 @@ from utils import (
 # Threshold for overlap of 2 bounding boxes
 THRESHOLD_SAME_BOUNDING_BOX = 0.02
 
-# Bounding boxes of objects should be at least 20% of image in width and height
-THRESHOLD_MIN_BOUNDING_BOX_WIDTH = 0.2
-THRESHOLD_MIN_BOUNDING_BOX_HEIGHT = 0.2
+# Bounding boxes of objects should be at least 25% of image in width and height
+THRESHOLD_MIN_BB_SIZE = 0.25 * 0.25
+
+# Maximum difference in bounding box area for target and visual distractor
+THRESHOLD_BB_SIZE_DIFFERENCE = 0.5
+
+# We allow high difference in bounding box size if the smaller bounding box is big enough (at least 50% in width/height)
+MIN_BOUNDING_BOX_SIZE_IF_HIGH_DIFFERENCE = 0.5 * 0.5
 
 # Bounding box sharpness quotient (relative to whole image)
-THRESHOLD_MIN_BOUNDING_BOX_SHARPNESS = 0.6
+THRESHOLD_MIN_BB_SHARPNESS = 0.6
 
 
 def get_bounding_box_size(relationship):
@@ -79,7 +84,7 @@ def get_image_sharpness(img_data):
     return variance_of_laplacian[0]
 
 
-def get_sharpness_quotient_of_bounding_box(img_data, bb):
+def get_sharpness_of_bounding_box(img_data, bb):
     cropped = img_data.crop(
         (
             bb[0] * img_data.width,
@@ -88,7 +93,13 @@ def get_sharpness_quotient_of_bounding_box(img_data, bb):
             bb[3] * img_data.height + bb[1] * img_data.height,
         )
     )
-    sharpness_quotient = get_image_sharpness(cropped) / get_image_sharpness(img_data)
+    return get_image_sharpness(cropped)
+
+
+def get_sharpness_quotient_of_bounding_box(img_data, bb):
+    sharpness_quotient = get_sharpness_of_bounding_box(
+        img_data, bb
+    ) / get_image_sharpness(img_data)
     return sharpness_quotient
 
 
@@ -98,9 +109,46 @@ def relationships_are_sharp(sample, rels):
         sharpness_quotient = get_sharpness_quotient_of_bounding_box(
             img_data, relationship.bounding_box
         )
-        if sharpness_quotient <= THRESHOLD_MIN_BOUNDING_BOX_SHARPNESS:
+        if sharpness_quotient <= THRESHOLD_MIN_BB_SHARPNESS:
             return False
     return True
+
+
+def show_image(
+    image_1_path, regions_and_attributes_1=None,
+):
+    fig = plt.gcf()
+    fig.set_size_inches(18.5, 10.5)
+    img_1_data = PIL_Image.open(image_1_path)
+
+    plt.imshow(img_1_data)
+
+    colors = ["green", "red"]
+    ax = plt.gca()
+    if regions_and_attributes_1:
+        for relationship, color in zip(regions_and_attributes_1, colors):
+            bb = relationship.bounding_box
+            ax.add_patch(
+                Rectangle(
+                    (bb[0] * img_1_data.width, bb[1] * img_1_data.height),
+                    bb[2] * img_1_data.width,
+                    bb[3] * img_1_data.height,
+                    fill=False,
+                    edgecolor=color,
+                    linewidth=3,
+                )
+            )
+            sharpness_quotient = get_sharpness_quotient_of_bounding_box(img_1_data, bb)
+            ax.text(
+                bb[0] * img_1_data.width,
+                bb[1] * img_1_data.height,
+                f"{relationship[SUBJECT]} {relationship[REL]} {relationship[OBJECT]} "
+                f"(Sharpness: {sharpness_quotient:.2f})",
+                bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
+            )
+
+    plt.tick_params(labelbottom="off", labelleft="off")
+    plt.show()
 
 
 def show_image_pair(
@@ -222,21 +270,30 @@ def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label)
                 relationship[SUBJECT] not in SYNONYMS[relationship_target[SUBJECT]]
                 and relationship[rel_label] in SYNONYMS[rel_value]
             ):
-                if not high_bounding_box_overlap(
-                    relationship.bounding_box, relationship_target.bounding_box
-                ):
-                    # For spatial relationships we require also the object to be the same
-                    if (
-                        relationship[rel_label] in RELATIONSHIPS_SPATIAL
-                        or relationship_target[rel_label] in RELATIONSHIPS_SPATIAL
-                    ):
-                        if (
-                            relationship[OBJECT]
-                            in SYNONYMS[relationship_target[OBJECT]]
+                # For spatial relationships we require also the object to be the same
+                if (
+                    relationship[rel_label] not in RELATIONSHIPS_SPATIAL
+                    and relationship_target[rel_label] not in RELATIONSHIPS_SPATIAL
+                ) or relationship[OBJECT] in SYNONYMS[relationship_target[OBJECT]]:
+                    # Make sure the bounding box is big enough
+                    if get_bounding_box_size(relationship) > THRESHOLD_MIN_BB_SIZE:
+                        # Make sure the bounding boxes are not actually the same object
+                        if not high_bounding_box_overlap(
+                            relationship.bounding_box, relationship_target.bounding_box
                         ):
-                            rels.append(relationship)
-                    else:
-                        rels.append(relationship)
+                            # Make sure the size difference to the target object is not too big
+                            size_target = get_bounding_box_size(relationship_target)
+                            size_distractor = get_bounding_box_size(relationship)
+                            size_diff = abs(size_target - size_distractor)
+                            size_min = (
+                                size_target
+                                if size_target < size_distractor
+                                else size_distractor
+                            )
+                            if (size_diff < THRESHOLD_BB_SIZE_DIFFERENCE) or (
+                                size_min > MIN_BOUNDING_BOX_SIZE_IF_HIGH_DIFFERENCE
+                            ):
+                                rels.append(relationship)
 
     return rels
 
@@ -244,24 +301,36 @@ def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label)
 def find_subj_with_other_rel(sample, subject, relationship_target, rel_label):
     rels = []
     for relationship in sample.relationships.detections:
+        # Check for correct labels
         if (
             relationship[SUBJECT] in SYNONYMS[subject]
             and relationship[rel_label] in VALID_NAMES[rel_label]
             and relationship[rel_label] not in SYNONYMS[relationship_target[rel_label]]
         ):
-            if not high_bounding_box_overlap(
-                relationship.bounding_box, relationship_target.bounding_box
-            ):
-                # For spatial relationships we require also the object to be the same
-                if (
-                    relationship[rel_label] in RELATIONSHIPS_SPATIAL
-                    or relationship_target[rel_label] in RELATIONSHIPS_SPATIAL
-                ):
-                    if relationship[OBJECT] in SYNONYMS[relationship_target[OBJECT]]:
-                        rels.append(relationship)
-                else:
-                    rels.append(relationship)
-
+            # For spatial relationships we require also the object to be the same
+            if (
+                relationship[rel_label] not in RELATIONSHIPS_SPATIAL
+                and relationship_target[rel_label] not in RELATIONSHIPS_SPATIAL
+            ) or relationship[OBJECT] in SYNONYMS[relationship_target[OBJECT]]:
+                # Make sure the bounding box is big enough
+                if get_bounding_box_size(relationship) > THRESHOLD_MIN_BB_SIZE:
+                    # Make sure the bounding boxes are not actually the same object
+                    if not high_bounding_box_overlap(
+                        relationship.bounding_box, relationship_target.bounding_box
+                    ):
+                        # Make sure the size difference to the target object is not too big
+                        size_target = get_bounding_box_size(relationship_target)
+                        size_distractor = get_bounding_box_size(relationship)
+                        size_diff = abs(size_target - size_distractor)
+                        size_min = (
+                            size_target
+                            if size_target < size_distractor
+                            else size_distractor
+                        )
+                        if (size_diff < THRESHOLD_BB_SIZE_DIFFERENCE) or (
+                            size_min > MIN_BOUNDING_BOX_SIZE_IF_HIGH_DIFFERENCE
+                        ):
+                            rels.append(relationship)
     return rels
 
 
@@ -303,9 +372,7 @@ def get_counterexample_images_subj(
     is_counterexample_relation = F(SUBJECT).is_in(SYNONYMS[distractor_subject]) & F(
         rel_label
     ).is_in(SYNONYMS[relationship_target[rel_label]])
-    is_big_enough = (F(BOUNDING_BOX)[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
-        F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
-    )
+    is_big_enough = F(BOUNDING_BOX)[2] * F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BB_SIZE
     # For spatial relationships we require also the object to be the same
     if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
         is_counterexample_relation = (
@@ -345,9 +412,7 @@ def get_counterexample_images_attr(
     is_counterexample_relation = F(SUBJECT).is_in(
         SYNONYMS[relationship_target[SUBJECT]]
     ) & F(rel_label).is_in(SYNONYMS[distractor_attribute])
-    is_big_enough = (F(BOUNDING_BOX)[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
-        F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
-    )
+    is_big_enough = F(BOUNDING_BOX)[2] * F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BB_SIZE
     # For spatial relationships we require also the object to be the same
     if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
         is_counterexample_relation = (
@@ -410,9 +475,7 @@ def generate_eval_sets_from_subject_tuples(
         # Compute matching images
         is_target = F(SUBJECT).is_in(SYNONYMS[target_subject])
         is_distractor = F(SUBJECT).is_in(SYNONYMS[distractor_subject])
-        is_big_enough = (F(BOUNDING_BOX)[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
-            F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
-        )
+        is_big_enough = F(BOUNDING_BOX)[2] * F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BB_SIZE
         matching_images = dataset.match(
             (F(IMAGE_RELATIONSHIPS).filter(is_target & is_big_enough).length() > 0)
             & (
@@ -429,6 +492,7 @@ def generate_eval_sets_from_subject_tuples(
                     for rel in example.relationships.detections
                     if rel[SUBJECT] in SYNONYMS[target_subject]
                     and rel[rel_label] in VALID_NAMES[rel_label]
+                    and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
                     and not is_subj_rel_in_image(
                         example, distractor_subject, rel[rel_label], rel_label
                     )  # check that distractor IS NOT in same image
@@ -478,6 +542,8 @@ def generate_eval_sets_from_subject_tuples(
                                     if rel[SUBJECT] in SYNONYMS[distractor_subject]
                                     and rel[rel_label]
                                     in SYNONYMS[relationship_target[rel_label]]
+                                    and get_bounding_box_size(rel)
+                                    > THRESHOLD_MIN_BB_SIZE
                                 ]
                                 counterexample_relationships = drop_synonyms(
                                     counterexample_relationships, rel_label,
@@ -583,9 +649,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
         # Compute matching images
         is_target = F(rel_label).is_in(SYNONYMS[target_attribute])
         is_distractor = F(rel_label).is_in(SYNONYMS[distractor_attribute])
-        is_big_enough = (F(BOUNDING_BOX)[2] > THRESHOLD_MIN_BOUNDING_BOX_WIDTH) & (
-            F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BOUNDING_BOX_HEIGHT
-        )
+        is_big_enough = F(BOUNDING_BOX)[2] * F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BB_SIZE
         matching_images = dataset.match(
             (F(IMAGE_RELATIONSHIPS).filter(is_target & is_big_enough).length() > 0)
             & (
@@ -599,6 +663,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
                 rel
                 for rel in example.relationships.detections
                 if rel[rel_label] in SYNONYMS[target_attribute]
+                and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
                 and not is_subj_rel_in_image(
                     example, rel[SUBJECT], distractor_attribute, rel_label
                 )  # check that distractor IS NOT in same image
@@ -646,6 +711,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
                                 for rel in counterexample.relationships.detections
                                 if rel[SUBJECT] in SYNONYMS[target_subject]
                                 and rel[rel_label] in SYNONYMS[distractor_attribute]
+                                and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
                             ]
                             counterexample_relationships = drop_synonyms(
                                 counterexample_relationships, SUBJECT,
