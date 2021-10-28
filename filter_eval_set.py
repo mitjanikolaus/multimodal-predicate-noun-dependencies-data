@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
     QShortcut,
 )
 
-from utils import OBJECTS_VERBS, SYNONYMS
+from utils import OBJECTS_VERBS, SYNONYMS, SUBJECT, OBJECT, get_target_and_distractor_sentence
 
 
 class EvalSetFilter(QWidget):
@@ -148,12 +148,7 @@ class EvalSetFilter(QWidget):
         penWhite = QtGui.QPen(QtCore.Qt.white)
         penWhite.setWidth(3)
 
-        text_target = f"a {SYNONYMS[self.sample['relationship_target'].Label1][0]} {self.sample['relationship_target'].label} {SYNONYMS[self.sample['relationship_target'].Label2][0]}"
-        if self.sample["relationship_target"].Label2 in OBJECTS_VERBS:
-            text_target += "ing"
-        text_distractor = f"a {SYNONYMS[self.sample['counterexample_relationship_target'].Label1][0]} {self.sample['counterexample_relationship_target'].label} {SYNONYMS[self.sample['counterexample_relationship_target'].Label2][0]}"
-        if self.sample["counterexample_relationship_target"].Label2 in OBJECTS_VERBS:
-            text_distractor += "ing"
+        text_target, text_distractor = get_target_and_distractor_sentence(self.sample)
 
         self.text_example_target.setText("Target: " + text_target)
         self.text_example_distractor.setText("Distractor: " + text_distractor)
@@ -195,7 +190,7 @@ class EvalSetFilter(QWidget):
                     round(bb[3] * pixmap.height()),
                 )
                 label = (
-                    f"{relationship.Label1} {relationship.label} {relationship.Label2}"
+                    f"{relationship[SUBJECT]} {relationship.label} {relationship[OBJECT]}"
                 )
                 self.painterInstance.setPen(penWhite)
                 self.painterInstance.drawText(
@@ -222,12 +217,12 @@ class EvalSetFilter(QWidget):
 
         def relationships_are_equal(s1, s2):
             return (
-                s1["relationship_target"].Label1
-                in SYNONYMS[s2["relationship_target"].Label1]
+                s1["relationship_target"][SUBJECT]
+                in SYNONYMS[s2["relationship_target"][SUBJECT]]
                 and s1["relationship_target"][rel_label]
                 in SYNONYMS[s2["relationship_target"][rel_label]]
-                and s1["counterexample_relationship_target"].Label1
-                in SYNONYMS[s2["counterexample_relationship_target"].Label1]
+                and s1["counterexample_relationship_target"][SUBJECT]
+                in SYNONYMS[s2["counterexample_relationship_target"][SUBJECT]]
                 and s1["counterexample_relationship_target"][rel_label]
                 in SYNONYMS[s2["counterexample_relationship_target"][rel_label]]
             )

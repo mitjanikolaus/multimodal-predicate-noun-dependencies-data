@@ -5,9 +5,7 @@ from fiftyone import ViewField as F
 import fiftyone.zoo as foz
 import numpy as np
 
-import matplotlib.pyplot as plt
 from PIL import Image as PIL_Image, ImageFilter, ImageStat
-from matplotlib.patches import Rectangle
 from tqdm import tqdm
 
 from utils import (
@@ -112,126 +110,6 @@ def relationships_are_sharp(sample, rels):
         if sharpness_quotient <= THRESHOLD_MIN_BB_SHARPNESS:
             return False
     return True
-
-
-def show_image(
-    image_1_path, regions_and_attributes_1=None,
-):
-    fig = plt.gcf()
-    fig.set_size_inches(18.5, 10.5)
-    img_1_data = PIL_Image.open(image_1_path)
-
-    plt.imshow(img_1_data)
-
-    colors = ["green", "red"]
-    ax = plt.gca()
-    if regions_and_attributes_1:
-        for relationship, color in zip(regions_and_attributes_1, colors):
-            bb = relationship.bounding_box
-            ax.add_patch(
-                Rectangle(
-                    (bb[0] * img_1_data.width, bb[1] * img_1_data.height),
-                    bb[2] * img_1_data.width,
-                    bb[3] * img_1_data.height,
-                    fill=False,
-                    edgecolor=color,
-                    linewidth=3,
-                )
-            )
-            sharpness_quotient = get_sharpness_quotient_of_bounding_box(img_1_data, bb)
-            ax.text(
-                bb[0] * img_1_data.width,
-                bb[1] * img_1_data.height,
-                f"{relationship[SUBJECT]} {relationship[REL]} {relationship[OBJECT]} "
-                f"(Sharpness: {sharpness_quotient:.2f})",
-                bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
-            )
-
-    plt.tick_params(labelbottom="off", labelleft="off")
-    plt.show()
-
-
-def show_image_pair(
-    image_1_path,
-    image_2_path,
-    regions_and_attributes_1=None,
-    regions_and_attributes_2=None,
-):
-    fig = plt.gcf()
-    fig.set_size_inches(18.5, 10.5)
-    img_1_data = PIL_Image.open(image_1_path)
-    img_2_data = PIL_Image.open(image_2_path)
-
-    # Transform both images to grayscale if one of them has only one channel
-    if img_1_data.mode == "L" or img_2_data.mode == "L":
-        img_1_data = img_1_data.convert("L")
-        img_2_data = img_2_data.convert("L")
-
-    # Make images equal size:
-    if img_2_data.height > img_1_data.height:
-        img_1_data_adjusted = img_1_data.crop(
-            (0, 0, img_1_data.width, img_2_data.height)
-        )
-        img_2_data_adjusted = img_2_data
-    else:
-        img_1_data_adjusted = img_1_data
-        img_2_data_adjusted = img_2_data.crop(
-            (0, 0, img_2_data.width, img_1_data.height)
-        )
-
-    image = np.column_stack((img_1_data_adjusted, img_2_data_adjusted))
-
-    plt.imshow(image)
-
-    colors = ["green", "red"]
-    ax = plt.gca()
-    if regions_and_attributes_1:
-        for relationship, color in zip(regions_and_attributes_1, colors):
-            bb = relationship.bounding_box
-            ax.add_patch(
-                Rectangle(
-                    (bb[0] * img_1_data.width, bb[1] * img_1_data.height),
-                    bb[2] * img_1_data.width,
-                    bb[3] * img_1_data.height,
-                    fill=False,
-                    edgecolor=color,
-                    linewidth=3,
-                )
-            )
-            sharpness_quotient = get_sharpness_quotient_of_bounding_box(img_1_data, bb)
-            ax.text(
-                bb[0] * img_1_data.width,
-                bb[1] * img_1_data.height,
-                f"{relationship[SUBJECT]} {relationship[REL]} {relationship[OBJECT]} "
-                f"(Sharpness: {sharpness_quotient:.2f})",
-                bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
-            )
-
-    if regions_and_attributes_2:
-        x_offset = img_1_data.width
-        for relationship, color in zip(regions_and_attributes_2, colors):
-            bb = relationship.bounding_box
-            ax.add_patch(
-                Rectangle(
-                    (bb[0] * img_2_data.width + x_offset, bb[1] * img_2_data.height),
-                    bb[2] * img_2_data.width,
-                    bb[3] * img_2_data.height,
-                    fill=False,
-                    edgecolor=color,
-                    linewidth=3,
-                )
-            )
-            sharpness_quotient = get_sharpness_quotient_of_bounding_box(img_2_data, bb)
-            ax.text(
-                bb[0] * img_2_data.width + x_offset,
-                bb[1] * img_2_data.height,
-                f"{relationship[SUBJECT]} {relationship[REL]} {relationship[OBJECT]} "
-                f"(Sharpness: {sharpness_quotient:.2f})",
-                bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
-            )
-
-    plt.tick_params(labelbottom="off", labelleft="off")
-    plt.show()
 
 
 def is_subj_rel_in_image(sample, subject, rel_value, rel_label):

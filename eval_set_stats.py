@@ -12,14 +12,13 @@ import fiftyone.zoo as foz
 
 from generate_semantic_eval_sets_open_images import (
     get_bounding_box_size,
-    show_image_pair,
     get_sharpness_of_bounding_box,
     THRESHOLD_BB_SIZE_DIFFERENCE,
-    show_image, THRESHOLD_MIN_BB_SIZE,
+    THRESHOLD_MIN_BB_SIZE,
 )
 
 # Maximum difference in bounding box sharpness for target and visual distractor
-from utils import SUBJECT
+from utils import SUBJECT, show_image
 
 THRESHOLD_BB_SHARPNESS_DIFFERENCE = 4000
 

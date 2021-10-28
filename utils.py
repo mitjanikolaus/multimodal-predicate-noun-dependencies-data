@@ -1,6 +1,14 @@
 import itertools
+import os
 
+import fiftyone
 import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+
+from PIL import Image as PIL_Image, ImageFilter, ImageStat
 
 from time import time
 
@@ -48,7 +56,7 @@ OBJECTS_INSTRUMENTS = [
     "Flute",
     "Drum",
     "Musical keyboard",
-    "Banjo"
+    "Banjo",
 ]
 
 OBJECTS_VEHICLES = [
@@ -67,7 +75,7 @@ OBJECTS_VEHICLES = [
     "Train",
     "Tank",
     "Airplane",
-    "Van"
+    "Van",
 ]
 
 OBJECTS_ANIMALS = ["Dog", "Cat", "Horse", "Elephant"]
@@ -137,7 +145,7 @@ OBJECTS_OTHERS = [
     "Cutting board",
     "Watch",
     "Tripod",
-    "Rose"
+    "Rose",
 ]
 
 OBJECTS_OTHERS += (
@@ -233,7 +241,10 @@ RELATIONSHIPS_TUPLES = (
 )
 
 subjects_counter = pd.read_csv(
-    "data/subject_occurrences.csv", index_col=None, header=None, names=["subject", "count"]
+    "data/subject_occurrences.csv",
+    index_col=None,
+    header=None,
+    names=["subject", "count"],
 )
 SUBJECT_NAMES = list(subjects_counter["subject"].values)
 
@@ -267,7 +278,7 @@ SYNONYMS_LIST = [
     ["Handbag", "Briefcase"],
     ["Cart", "Golf cart"],
     ["Football", "Volleyball (Ball)", "Rugby ball", "Cricket ball", "Tennis ball"],
-    ["Tree", "Palm tree"]
+    ["Tree", "Palm tree"],
 ]
 
 SYNONYMS = {name: [name] for name in SUBJECT_NAMES + OBJECT_NAMES + RELATIONSHIP_NAMES}
@@ -291,7 +302,7 @@ def log_time(message, reference_time=None):
     timedelta = current_time - ref
 
     if timedelta > TIME_LOG_THRESHOLD:
-        line = "="*40
+        line = "=" * 40
         print(line)
         print(f"{message} | Time passed: {timedelta:.1f}s")
         print(line)
@@ -299,3 +310,204 @@ def log_time(message, reference_time=None):
 
     if not reference_time:
         REFERENCE_TIME = current_time
+
+
+def get_local_image_path(img_path):
+    return os.path.join(fiftyone.config.dataset_zoo_dir, img_path.split("fiftyone/")[1])
+
+
+def show_image(
+    image_1_path,
+    regions_and_attributes_1=None,
+):
+    fig = plt.gcf()
+    fig.set_size_inches(18.5, 10.5)
+    img_1_data = PIL_Image.open(image_1_path)
+
+    plt.imshow(img_1_data)
+
+    colors = ["green", "red"]
+    ax = plt.gca()
+    if regions_and_attributes_1:
+        for relationship, color in zip(regions_and_attributes_1, colors):
+            bb = relationship.bounding_box
+            ax.add_patch(
+                Rectangle(
+                    (bb[0] * img_1_data.width, bb[1] * img_1_data.height),
+                    bb[2] * img_1_data.width,
+                    bb[3] * img_1_data.height,
+                    fill=False,
+                    edgecolor=color,
+                    linewidth=3,
+                )
+            )
+            ax.text(
+                bb[0] * img_1_data.width,
+                bb[1] * img_1_data.height,
+                f"{relationship[SUBJECT]} {relationship[REL]} {relationship[OBJECT]} ",
+                bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
+            )
+
+    plt.tick_params(labelbottom="off", labelleft="off")
+    plt.show()
+
+
+def show_image_pair(
+    image_1_path,
+    image_2_path,
+    regions_and_attributes_1=None,
+    regions_and_attributes_2=None,
+    target_sentence=None,
+    distractor_sentence=None,
+    result_example=None,
+    result_counterexample=None,
+):
+    fig = plt.gcf()
+    fig.set_size_inches(18.5, 10.5)
+    img_1_data = PIL_Image.open(image_1_path)
+    img_2_data = PIL_Image.open(image_2_path)
+
+    # Transform both images to grayscale if one of them has only one channel
+    if img_1_data.mode == "L" or img_2_data.mode == "L":
+        img_1_data = img_1_data.convert("L")
+        img_2_data = img_2_data.convert("L")
+
+    # Make images equal size:
+    if img_2_data.height > img_1_data.height:
+        img_1_data_adjusted = img_1_data.crop(
+            (0, 0, img_1_data.width, img_2_data.height)
+        )
+        img_2_data_adjusted = img_2_data
+    else:
+        img_1_data_adjusted = img_1_data
+        img_2_data_adjusted = img_2_data.crop(
+            (0, 0, img_2_data.width, img_1_data.height)
+        )
+
+    image = np.column_stack((img_1_data_adjusted, img_2_data_adjusted))
+
+    plt.imshow(image)
+
+    colors = ["green", "red"]
+    ax = plt.gca()
+    if regions_and_attributes_1:
+        for relationship, color in zip(regions_and_attributes_1, colors):
+            bb = relationship.bounding_box
+            ax.add_patch(
+                Rectangle(
+                    (bb[0] * img_1_data.width, bb[1] * img_1_data.height),
+                    bb[2] * img_1_data.width,
+                    bb[3] * img_1_data.height,
+                    fill=False,
+                    edgecolor=color,
+                    linewidth=3,
+                )
+            )
+            ax.text(
+                bb[0] * img_1_data.width,
+                bb[1] * img_1_data.height,
+                f"{relationship[SUBJECT]} {relationship[REL]} {relationship[OBJECT]} ",
+                bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
+            )
+
+    if regions_and_attributes_2:
+        x_offset = img_1_data.width
+        for relationship, color in zip(regions_and_attributes_2, colors):
+            bb = relationship.bounding_box
+            ax.add_patch(
+                Rectangle(
+                    (bb[0] * img_2_data.width + x_offset, bb[1] * img_2_data.height),
+                    bb[2] * img_2_data.width,
+                    bb[3] * img_2_data.height,
+                    fill=False,
+                    edgecolor=color,
+                    linewidth=3,
+                )
+            )
+            ax.text(
+                bb[0] * img_2_data.width + x_offset,
+                bb[1] * img_2_data.height,
+                f"{relationship[SUBJECT]} {relationship[REL]} {relationship[OBJECT]} ",
+                bbox={"facecolor": "white", "alpha": 0.7, "pad": 10},
+            )
+
+    plt.tick_params(labelbottom="off", labelleft="off")
+
+    ax.axis("off")
+    ax.text(
+        0.5,
+        -0.12,
+        f"Target sentence: {target_sentence}\nDistractor sentence: {distractor_sentence}\n"
+        f"Result: {result_example}\nResult (counterexample): {result_counterexample}",
+        size=12,
+        ha="center",
+        transform=ax.transAxes,
+    )
+
+    plt.show()
+
+
+def show_sample(
+    sample,
+    target_sentence=None,
+    distractor_sentence=None,
+    result_example=None,
+    result_counterexample=None,
+):
+    img_1_path = get_local_image_path(sample["img_example"])
+    img_2_path = get_local_image_path(sample["img_counterexample"])
+
+    show_image_pair(
+        img_1_path,
+        img_2_path,
+        [sample["relationship_target"], sample["relationship_visual_distractor"]],
+        [
+            sample["counterexample_relationship_target"],
+            sample["counterexample_relationship_visual_distractor"],
+        ],
+        target_sentence,
+        distractor_sentence,
+        result_example,
+        result_counterexample,
+    )
+
+
+def generate_sentence_from_triplet(subject, predicate, object):
+    if object in OBJECTS_VERBS:
+        if object.endswith("t"):
+            object += "ting"
+        elif object.endswith("e"):
+            object = object[:-1] + "ing"
+        else:
+            object += "ing"
+    if object in OBJECTS_ANIMALS + OBJECTS_INSTRUMENTS + OBJECTS_VEHICLES:
+        if object not in ["Glasses"]:
+            object = "a " + object
+
+    if "(made of)" in object:
+        object = object.replace("(made of)", "")
+    sentence = f"a {subject} {predicate} {object}"
+
+    # Add full stop
+    sentence = sentence + "."
+
+    # Lower case
+    sentence = sentence.lower()
+
+    return sentence
+
+
+def get_target_and_distractor_sentence(sample):
+    # TODO: consider rel_label?
+    text_target = generate_sentence_from_triplet(
+        SYNONYMS[sample["relationship_target"][SUBJECT]][0],
+        sample["relationship_target"].label,
+        SYNONYMS[sample["relationship_target"][OBJECT]][0],
+    )
+    text_distractor = generate_sentence_from_triplet(
+        SYNONYMS[sample["counterexample_relationship_target"][SUBJECT]][0],
+        sample["counterexample_relationship_target"].label,
+        SYNONYMS[sample["counterexample_relationship_target"][OBJECT]][0],
+    )
+
+    return text_target, text_distractor
