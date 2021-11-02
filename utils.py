@@ -316,6 +316,18 @@ def get_local_image_path(img_path):
     return os.path.join(fiftyone.config.dataset_zoo_dir, img_path.split("fiftyone/")[1])
 
 
+# Threshold for overlap of 2 bounding boxes
+THRESHOLD_SAME_BOUNDING_BOX = 0.02
+
+
+def high_bounding_box_overlap(bb1, bb2, threshold=THRESHOLD_SAME_BOUNDING_BOX):
+    """verify that bounding boxes are not duplicate annotations (actually the (almost) the same bounding box)"""
+    diffs = [abs(b1 - b2) for b1, b2 in zip(bb1, bb2)]
+    if np.all([diff < threshold for diff in diffs]):
+        return True
+    return False
+
+
 def show_image(
     image_1_path,
     regions_and_attributes_1=None,

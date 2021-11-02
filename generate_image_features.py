@@ -21,6 +21,8 @@ from detectron2.layers import nms
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
 
+from PIL import Image
+
 
 MIN_BOXES = 10
 MAX_BOXES = 100
@@ -134,7 +136,7 @@ def get_output_boxes(boxes, batched_inputs, image_size):
     return output_boxes
 
 
-def get_box_scores(cfg, pred_class_logits, pred_proposal_deltas):
+def get_box_scores(cfg, pred_class_logits, pred_proposal_deltas, proposals):
     box2box_transform = Box2BoxTransform(
         weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS
     )
@@ -167,9 +169,7 @@ def get_box_features(model, features, proposals, cfg, batch_size):
 
     output_dim = cfg.MODEL.ROI_BOX_HEAD.FC_DIM
 
-    box_features = box_features.reshape(
-        batch_size, 1000, output_dim
-    )
+    box_features = box_features.reshape(batch_size, 1000, output_dim)
     return box_features, features_list
 
 
@@ -193,6 +193,75 @@ def get_visual_embeds(box_features, keep_boxes):
     return box_features[keep_boxes.copy()]
 
 
+def get_image_features(img_example, img_counterexample):
+    # Detectron expects BGR images
+    img_example_bgr = cv2.cvtColor(img_example, cv2.COLOR_RGB2BGR)
+    img_counterexample_bgr = cv2.cvtColor(img_counterexample, cv2.COLOR_RGB2BGR)
+
+    images, batched_inputs = prepare_image_inputs(
+        cfg, [img_example_bgr, img_counterexample_bgr]
+    )
+
+    features = get_features(model, images)
+
+    proposals = get_proposals(model, images, features)
+
+    box_features, features_list = get_box_features(
+        model, features, proposals, cfg, batch_size=2
+    )
+
+    pred_class_logits, pred_proposal_deltas = get_prediction_logits(
+        model, features_list, proposals
+    )
+
+    boxes, scores, image_shapes = get_box_scores(
+        cfg, pred_class_logits, pred_proposal_deltas, proposals
+    )
+
+    output_boxes = [
+        get_output_boxes(boxes[i], batched_inputs[i], proposals[i].image_size)
+        for i in range(len(proposals))
+    ]
+
+    temp = [select_boxes(cfg, output_boxes[i], scores[i]) for i in range(len(scores))]
+    keep_boxes, max_conf = [], []
+    for keep_box, mx_conf in temp:
+        keep_boxes.append(keep_box)
+        max_conf.append(mx_conf)
+
+    keep_boxes = [
+        filter_boxes(keep_box, mx_conf, MIN_BOXES, MAX_BOXES)
+        for keep_box, mx_conf in zip(keep_boxes, max_conf)
+    ]
+
+    visual_embeds = [
+        get_visual_embeds(box_feature, keep_box)
+        for box_feature, keep_box in zip(box_features, keep_boxes)
+    ]
+
+    return visual_embeds[0].detach(), visual_embeds[1].detach()
+
+
+def crop_image_to_bounding_box_size(image_path, bb):
+    im = Image.open(image_path)
+    # Size of the image in pixels (size of original image)
+    width, height = im.size
+
+    bb[0] *= width
+    bb[2] *= width
+    bb[1] *= height
+    bb[3] *= height
+
+    # transform width and height to coordinates
+    bb = [bb[0], bb[1], bb[0] + bb[2], bb[1] + bb[3]]
+
+    im1 = im.crop(bb)
+
+    im1.show()
+
+    return np.array(im1)
+
+
 if __name__ == "__main__":
     arg_values = get_args()
 
@@ -205,68 +274,46 @@ if __name__ == "__main__":
 
     eval_sets = pickle.load(open(arg_values.eval_set, "rb"))
     image_features = {}
+    image_features_cropped = {}
 
     for key, set in eval_sets.items():
         print(key)
         for sample in tqdm(set):
             # show_sample(sample)
-
             img_example_path = get_local_image_path(sample["img_example"])
             img_counterexample_path = get_local_image_path(sample["img_counterexample"])
 
             img_example = plt.imread(img_example_path)
             img_counterexample = plt.imread(img_counterexample_path)
+            (
+                image_features[img_example_path],
+                image_features[img_counterexample_path],
+            ) = get_image_features(img_example, img_counterexample)
 
-            # Detectron expects BGR images
-            img_example_bgr = cv2.cvtColor(img_example, cv2.COLOR_RGB2BGR)
-            img_counterexample_bgr = cv2.cvtColor(img_counterexample, cv2.COLOR_RGB2BGR)
-
-            images, batched_inputs = prepare_image_inputs(
-                cfg, [img_example_bgr, img_counterexample_bgr]
+            img_example_cropped = crop_image_to_bounding_box_size(
+                img_example_path, sample["relationship_target"].bounding_box
             )
-
-            features = get_features(model, images)
-
-            proposals = get_proposals(model, images, features)
-
-            box_features, features_list = get_box_features(model, features, proposals, cfg, batch_size=2)
-
-            pred_class_logits, pred_proposal_deltas = get_prediction_logits(
-                model, features_list, proposals
+            img_counterexample_cropped = crop_image_to_bounding_box_size(
+                img_counterexample_path,
+                sample["counterexample_relationship_target"].bounding_box,
             )
-
-            boxes, scores, image_shapes = get_box_scores(
-                cfg, pred_class_logits, pred_proposal_deltas
-            )
-
-            output_boxes = [
-                get_output_boxes(boxes[i], batched_inputs[i], proposals[i].image_size)
-                for i in range(len(proposals))
-            ]
-
-            temp = [
-                select_boxes(cfg, output_boxes[i], scores[i])
-                for i in range(len(scores))
-            ]
-            keep_boxes, max_conf = [], []
-            for keep_box, mx_conf in temp:
-                keep_boxes.append(keep_box)
-                max_conf.append(mx_conf)
-
-            keep_boxes = [
-                filter_boxes(keep_box, mx_conf, MIN_BOXES, MAX_BOXES)
-                for keep_box, mx_conf in zip(keep_boxes, max_conf)
-            ]
-
-            visual_embeds = [
-                get_visual_embeds(box_feature, keep_box)
-                for box_feature, keep_box in zip(box_features, keep_boxes)
-            ]
-
-            image_features[img_example_path] = visual_embeds[0].detach()
-            image_features[img_counterexample_path] = visual_embeds[1].detach()
+            (
+                image_features_cropped[img_example_path],
+                image_features_cropped[img_counterexample_path],
+            ) = get_image_features(img_example_cropped, img_counterexample_cropped)
 
     out_file_name = os.path.basename(arg_values.eval_set)
-    out_file_path = os.path.expanduser(os.path.join("~/data/multimodal_evaluation/image_features_1024", out_file_name))
+    out_file_path = os.path.expanduser(
+        os.path.join("~/data/multimodal_evaluation/image_features_1024", out_file_name)
+    )
     os.makedirs(os.path.dirname(out_file_path), exist_ok=True)
     pickle.dump(image_features, open(out_file_path, "wb"))
+
+    out_file_name = os.path.basename(arg_values.eval_set)
+    out_file_path_cropped = os.path.expanduser(
+        os.path.join(
+            "~/data/multimodal_evaluation/image_features_1024_cropped", out_file_name
+        )
+    )
+    os.makedirs(os.path.dirname(out_file_path_cropped), exist_ok=True)
+    pickle.dump(image_features_cropped, open(out_file_path_cropped, "wb"))

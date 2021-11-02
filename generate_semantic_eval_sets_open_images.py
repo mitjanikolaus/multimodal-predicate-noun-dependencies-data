@@ -19,11 +19,9 @@ from utils import (
     RELATIONSHIPS_TUPLES,
     RELATIONSHIPS_SPATIAL,
     BOUNDING_BOX,
-    IMAGE_RELATIONSHIPS,
+    IMAGE_RELATIONSHIPS, high_bounding_box_overlap,
 )
 
-# Threshold for overlap of 2 bounding boxes
-THRESHOLD_SAME_BOUNDING_BOX = 0.02
 
 # Bounding boxes of objects should be at least 25% of image in width and height
 THRESHOLD_MIN_BB_SIZE = 0.25 * 0.25
@@ -121,14 +119,6 @@ def is_subj_rel_in_image(sample, subject, rel_value, rel_label):
             ):
                 return True
 
-    return False
-
-
-def high_bounding_box_overlap(bb1, bb2):
-    """verify that bounding boxes are not duplicate annotations (actually the (almost) the same bounding box)"""
-    diffs = [abs(b1 - b2) for b1, b2 in zip(bb1, bb2)]
-    if np.all([diff < THRESHOLD_SAME_BOUNDING_BOX for diff in diffs]):
-        return True
     return False
 
 
