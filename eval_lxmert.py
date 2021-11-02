@@ -2,17 +2,14 @@ import argparse
 import base64
 import csv
 import os
-import pickle
 import sys
-import time
 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from transformers import BertTokenizer, VisualBertModel, VisualBertForPreTraining, LxmertTokenizer, LxmertForPreTraining
+from transformers import LxmertTokenizer, LxmertForPreTraining
 
 from eval_model import eval_2afc
-from utils import get_target_and_distractor_sentence, get_local_image_path, show_sample
 
 
 TSV_FIELDNAMES = ["img_id", "img_h", "img_w", "objects_id", "objects_conf",
@@ -64,7 +61,7 @@ def load_tsv_image_features(fname, topk=None):
     return data_dict
 
 
-def get_classification_score(model, tokenizer, test_sentence, visual_features):
+def get_classification_score(model, tokenizer, test_sentence, visual_features, correct_sentence=None):
     inputs = tokenizer(test_sentence, return_tensors="pt")
 
     decoded_sequence = tokenizer.decode(inputs["input_ids"][0])

@@ -1,16 +1,15 @@
 import argparse
 import os
 import pickle
-import torch, torchvision
+
+import torch
 import matplotlib.pyplot as plt
-import json
 import cv2
 import numpy as np
-from copy import deepcopy
 
 from tqdm import tqdm
 
-from utils import get_target_and_distractor_sentence, get_local_image_path, show_sample
+from utils import get_local_image_path, show_sample
 from detectron2.modeling import build_model
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputs
 from detectron2.checkpoint import DetectionCheckpointer
@@ -36,6 +35,8 @@ def get_args():
 def load_config_and_model_weights(cfg_path):
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file(cfg_path))
+
+    print("Output features dimensionality: ", cfg.MODEL.ROI_BOX_HEAD.FC_DIM)
 
     # ROI HEADS SCORE THRESHOLD
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
@@ -195,6 +196,7 @@ def get_visual_embeds(box_features, keep_boxes):
 if __name__ == "__main__":
     arg_values = get_args()
 
+    # TODO: original paper: "e2e_mask_rcnn_R-101-FPN_2x" (detectron 1)
     cfg_path = "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml"
 
     cfg = load_config_and_model_weights(cfg_path)
@@ -202,7 +204,7 @@ if __name__ == "__main__":
     model = get_model(cfg)
 
     eval_sets = pickle.load(open(arg_values.eval_set, "rb"))
-    out_eval_sets = {key: [] for key in eval_sets.keys()}
+    image_features = {}
 
     for key, set in eval_sets.items():
         print(key)
@@ -261,16 +263,10 @@ if __name__ == "__main__":
                 for box_feature, keep_box in zip(box_features, keep_boxes)
             ]
 
-            sample["img_example_features"] = visual_embeds[0].detach()
-            sample["img_counterexample_features"] = visual_embeds[1].detach()
-            out_eval_sets[key].append(sample)
+            image_features[img_example_path] = visual_embeds[0].detach()
+            image_features[img_counterexample_path] = visual_embeds[1].detach()
 
-    out_file_name = os.path.expanduser(
-        os.path.join(
-            "~/data/multimodal_evaluation",
-            "eval_sets_with_image_features",
-            os.path.basename(arg_values.eval_set),
-        )
-    )
-    os.makedirs(os.path.dirname(out_file_name), exist_ok=True)
-    pickle.dump(out_eval_sets, open(out_file_name, "wb"))
+    out_file_name = os.path.basename(arg_values.eval_set)
+    out_file_path = os.path.expanduser(os.path.join("~/data/multimodal_evaluation/image_features_1024", out_file_name))
+    os.makedirs(os.path.dirname(out_file_path), exist_ok=True)
+    pickle.dump(image_features, open(out_file_path, "wb"))

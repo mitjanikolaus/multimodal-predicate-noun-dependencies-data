@@ -2,7 +2,7 @@ import argparse
 import os
 import pickle
 
-from utils import get_target_and_distractor_sentence
+from utils import get_target_and_distractor_sentence, show_sample
 
 
 def get_args():
@@ -27,8 +27,8 @@ def eval_2afc(model, tokenizer, img_features, classification_score_function, arg
             example_features = img_features[os.path.basename(sample['img_example'])]
             counterexample_features = img_features[os.path.basename(sample['img_counterexample'])]
 
-            prob_target_match = classification_score_function(model, tokenizer, text_target, example_features)
-            prob_distractor_match = classification_score_function(model, tokenizer, text_distractor, example_features)
+            prob_target_match = classification_score_function(model, tokenizer, text_target, example_features, text_target)
+            prob_distractor_match = classification_score_function(model, tokenizer, text_distractor, example_features, text_target)
 
             if prob_target_match > prob_distractor_match:
                 result_example = "SUCCESS"
@@ -42,8 +42,8 @@ def eval_2afc(model, tokenizer, img_features, classification_score_function, arg
             # Counterexample: switch target and distractor sentence
             text_distractor, text_target = text_target, text_distractor
 
-            prob_target_match = classification_score_function(model, tokenizer, text_target, counterexample_features)
-            prob_distractor_match = classification_score_function(model, tokenizer, text_distractor, counterexample_features)
+            prob_target_match = classification_score_function(model, tokenizer, text_target, counterexample_features, text_target)
+            prob_distractor_match = classification_score_function(model, tokenizer, text_distractor, counterexample_features, text_target)
 
             if prob_target_match > prob_distractor_match:
                 result_counterexample = "SUCCESS"
@@ -54,7 +54,7 @@ def eval_2afc(model, tokenizer, img_features, classification_score_function, arg
 
             result_counterexample += f" ({prob_target_match:.3f} vs. {prob_distractor_match:.3f})"
 
-            # show_sample(sample, text_distractor, text_target, result_example, result_counterexample)
+            show_sample(sample, text_distractor, text_target, result_example, result_counterexample)
 
     print(f"Accuracy: {successes/(successes+failures)}")
 
