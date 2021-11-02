@@ -480,12 +480,13 @@ def generate_sentence_from_triplet(subject, predicate, object):
             object = object[:-1] + "ing"
         else:
             object += "ing"
-    if object in OBJECTS_ANIMALS + OBJECTS_INSTRUMENTS + OBJECTS_VEHICLES:
+    if object in OBJECTS_ANIMALS + OBJECTS_INSTRUMENTS + OBJECTS_VEHICLES + OBJECTS_OTHERS:
         if object not in ["Glasses"]:
             object = "a " + object
 
     if "(made of)" in object:
-        object = object.replace("(made of)", "")
+        object = object.replace("(made of)", " made of ")
+
     sentence = f"a {subject} {predicate} {object}"
 
     # Add full stop
