@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-from PIL import Image as PIL_Image, ImageFilter, ImageStat
+from PIL import Image as PIL_Image
 
 from time import time
 
@@ -484,6 +484,42 @@ def show_sample(
     )
 
 
+def crop_image_to_bounding_box_size(image_path, bb, return_numpy_array=True):
+    im = PIL_Image.open(image_path)
+    # Size of the image in pixels (size of original image)
+    width, height = im.size
+
+    bb[0] *= width
+    bb[2] *= width
+    bb[1] *= height
+    bb[3] *= height
+
+    # transform width and height to coordinates
+    bb = [bb[0], bb[1], bb[0] + bb[2], bb[1] + bb[3]]
+
+    img_cropped = im.crop(bb)
+
+    if return_numpy_array:
+        return np.array(img_cropped)
+    else:
+        return img_cropped
+
+
+IMGS_CROPPED_BASE_PATH = os.path.expanduser(
+    "~/data/multimodal_evaluation/images_cropped/"
+)
+
+
+def get_path_of_cropped_image(img_path, relationship):
+    return os.path.join(
+        IMGS_CROPPED_BASE_PATH,
+        os.path.basename(img_path).split(".jpg")[0]
+        + "_rel_"
+        + relationship.id
+        + ".jpg",
+    )
+
+
 def generate_sentence_from_triplet(subject, predicate, object):
     if object in OBJECTS_VERBS:
         if object.endswith("t"):
@@ -492,7 +528,10 @@ def generate_sentence_from_triplet(subject, predicate, object):
             object = object[:-1] + "ing"
         else:
             object += "ing"
-    if object in OBJECTS_ANIMALS + OBJECTS_INSTRUMENTS + OBJECTS_VEHICLES + OBJECTS_OTHERS:
+    if (
+        object
+        in OBJECTS_ANIMALS + OBJECTS_INSTRUMENTS + OBJECTS_VEHICLES + OBJECTS_OTHERS
+    ):
         if object not in ["Glasses"]:
             object = "a " + object
 

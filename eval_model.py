@@ -54,13 +54,6 @@ def eval_2afc(model, tokenizer, img_features, classification_score_function, arg
 
             result_counterexample += f" ({prob_target_match:.3f} vs. {prob_distractor_match:.3f})"
 
-            show_sample(sample, text_distractor, text_target, result_example, result_counterexample)
+            # show_sample(sample, text_distractor, text_target, result_example, result_counterexample)
 
     print(f"Accuracy: {successes/(successes+failures)}")
-
-
-
-
-
-
-

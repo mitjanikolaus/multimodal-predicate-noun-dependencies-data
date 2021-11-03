@@ -9,7 +9,7 @@ import numpy as np
 
 from tqdm import tqdm
 
-from utils import get_local_image_path, show_sample
+from utils import get_local_image_path, show_sample, crop_image_to_bounding_box_size
 from detectron2.modeling import build_model
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputs
 from detectron2.checkpoint import DetectionCheckpointer
@@ -240,26 +240,6 @@ def get_image_features(img_example, img_counterexample):
     ]
 
     return visual_embeds[0].detach(), visual_embeds[1].detach()
-
-
-def crop_image_to_bounding_box_size(image_path, bb):
-    im = Image.open(image_path)
-    # Size of the image in pixels (size of original image)
-    width, height = im.size
-
-    bb[0] *= width
-    bb[2] *= width
-    bb[1] *= height
-    bb[3] *= height
-
-    # transform width and height to coordinates
-    bb = [bb[0], bb[1], bb[0] + bb[2], bb[1] + bb[3]]
-
-    im1 = im.crop(bb)
-
-    im1.show()
-
-    return np.array(im1)
 
 
 if __name__ == "__main__":
