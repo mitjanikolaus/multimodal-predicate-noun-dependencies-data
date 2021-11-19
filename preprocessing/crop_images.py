@@ -62,12 +62,12 @@ if __name__ == "__main__":
         "img_paths_" + os.path.basename(arg_values.eval_set.split(".p")[0]) + ".txt"
     )
     with open(out_file_name, "w") as text_file:
-        for path in img_paths:
+        for path in {p for p in img_paths}:
             text_file.write(path + "\n")
 
     out_file_cropped_name = (
             "img_cropped_paths_" + os.path.basename(arg_values.eval_set.split(".p")[0]) + ".txt"
     )
     with open(out_file_cropped_name, "w") as text_file:
-        for path in img_cropped_paths:
+        for path in {p for p in img_cropped_paths}:
             text_file.write(path + "\n")
