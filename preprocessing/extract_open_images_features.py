@@ -48,6 +48,9 @@ def generate_tsv(prototxt, weights, image_paths, outfile):
     # caffe.set_device(0)
     net = caffe.Net(prototxt, caffe.TEST, weights=weights)
 
+    if os.path.exists(outfile):
+        raise RuntimeError("Output file already exists! Aborting.")
+
     with open(outfile, 'ab') as tsvfile:
         writer = csv.DictWriter(tsvfile, delimiter='\t', fieldnames=FIELDNAMES)
         for path in tqdm(image_paths):
