@@ -447,14 +447,47 @@ def show_image_pair(
 
     ax.axis("off")
     ax.text(
-        0.5,
-        -0.12,
-        f"Target sentence: {target_sentence}\nDistractor sentence: {distractor_sentence}\n"
-        f"Result: {result_example}\nResult (counterexample): {result_counterexample}",
-        size=12,
+        0.25,
+        1.1,
+        "Example",
+        size=14,
         ha="center",
+        va="top",
         transform=ax.transAxes,
     )
+    ax.text(
+        0.75,
+        1.1,
+        "Counterexample",
+        size=15,
+        ha="center",
+        va="top",
+        transform=ax.transAxes,
+    )
+    print(ax.get_ylim())
+
+    if result_example:
+        ax.text(
+            0,
+            -0.01,
+            f"Target sentence: {target_sentence}\nDistractor sentence: {distractor_sentence}\n"
+            f"Result: {result_example}",
+            size=10,
+            ha="left",
+            va="top",
+            transform=ax.transAxes,
+        )
+    if result_counterexample:
+        ax.text(
+            0.5,
+            -0.01,
+            f"Target sentence: {distractor_sentence}\nDistractor sentence: {target_sentence}\n"
+            f"Result: {result_counterexample}",
+            size=10,
+            ha="left",
+            va="top",
+            transform=ax.transAxes,
+        )
 
     plt.show()
 
@@ -510,13 +543,15 @@ IMGS_CROPPED_BASE_PATH = os.path.expanduser(
 )
 
 
+def get_file_name_of_cropped_image(img_path, relationship):
+    return (
+        os.path.basename(img_path).split(".jpg")[0] + "_rel_" + relationship.id + ".jpg"
+    )
+
+
 def get_path_of_cropped_image(img_path, relationship):
     return os.path.join(
-        IMGS_CROPPED_BASE_PATH,
-        os.path.basename(img_path).split(".jpg")[0]
-        + "_rel_"
-        + relationship.id
-        + ".jpg",
+        IMGS_CROPPED_BASE_PATH, get_file_name_of_cropped_image(img_path, relationship)
     )
 
 

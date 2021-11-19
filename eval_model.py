@@ -2,7 +2,7 @@ import argparse
 import os
 import pickle
 
-from utils import get_target_and_distractor_sentence, show_sample
+from utils import get_target_and_distractor_sentence, get_file_name_of_cropped_image
 
 
 def get_args():
@@ -24,8 +24,14 @@ def eval_2afc(model, tokenizer, img_features, classification_score_function, arg
         for sample in set:
             text_target, text_distractor = get_target_and_distractor_sentence(sample)
 
-            example_features = img_features[os.path.basename(sample['img_example'])]
-            counterexample_features = img_features[os.path.basename(sample['img_counterexample'])]
+            if "cropped" in args.img_features_path:
+                key_example = get_file_name_of_cropped_image(sample["img_example"], sample["relationship_target"])
+                example_features = img_features[key_example]
+                key_counterexample = get_file_name_of_cropped_image(sample["img_counterexample"], sample["counterexample_relationship_target"])
+                counterexample_features = img_features[key_counterexample]
+            else:
+                example_features = img_features[os.path.basename(sample['img_example'])]
+                counterexample_features = img_features[os.path.basename(sample['img_counterexample'])]
 
             prob_target_match = classification_score_function(model, tokenizer, text_target, example_features, text_target)
             prob_distractor_match = classification_score_function(model, tokenizer, text_distractor, example_features, text_target)
@@ -56,4 +62,4 @@ def eval_2afc(model, tokenizer, img_features, classification_score_function, arg
 
             # show_sample(sample, text_distractor, text_target, result_example, result_counterexample)
 
-    print(f"Accuracy: {successes/(successes+failures)}")
+    print(f"Accuracy: {round(100*successes/(successes+failures), 2)} %")

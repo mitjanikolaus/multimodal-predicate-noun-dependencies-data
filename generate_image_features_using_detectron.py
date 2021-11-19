@@ -9,7 +9,7 @@ import numpy as np
 
 from tqdm import tqdm
 
-from utils import get_local_image_path, show_sample, crop_image_to_bounding_box_size
+from utils import get_local_image_path, get_path_of_cropped_image
 from detectron2.modeling import build_model
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputs
 from detectron2.checkpoint import DetectionCheckpointer
@@ -259,7 +259,6 @@ if __name__ == "__main__":
     for key, set in eval_sets.items():
         print(key)
         for sample in tqdm(set):
-            # show_sample(sample)
             img_example_path = get_local_image_path(sample["img_example"])
             img_counterexample_path = get_local_image_path(sample["img_counterexample"])
 
@@ -270,16 +269,14 @@ if __name__ == "__main__":
                 image_features[img_counterexample_path],
             ) = get_image_features(img_example, img_counterexample)
 
-            img_example_cropped = crop_image_to_bounding_box_size(
-                img_example_path, sample["relationship_target"].bounding_box
-            )
-            img_counterexample_cropped = crop_image_to_bounding_box_size(
-                img_counterexample_path,
-                sample["counterexample_relationship_target"].bounding_box,
-            )
+            img_example_cropped_path = get_path_of_cropped_image(img_example_path, sample["relationship_target"])
+            img_example_cropped = plt.imread(img_example_cropped_path)
+
+            img_counterexample_cropped_path = get_path_of_cropped_image(img_counterexample_path, sample["counterexample_relationship_target"])
+            img_counterexample_cropped = plt.imread(img_example_cropped_path)
             (
-                image_features_cropped[img_example_path],
-                image_features_cropped[img_counterexample_path],
+                image_features_cropped[img_example_cropped_path],
+                image_features_cropped[img_counterexample_cropped_path],
             ) = get_image_features(img_example_cropped, img_counterexample_cropped)
 
     out_file_name = os.path.basename(arg_values.eval_set)

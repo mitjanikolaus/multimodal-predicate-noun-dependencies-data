@@ -54,14 +54,23 @@ def get_args():
     parser.add_argument("--eval-set", type=str, required=True)
     parser.add_argument("--img-features-path", type=str, required=True)
 
+    parser.add_argument("--offline", action="store_true")
+
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
 
-    model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-nlvr2-coco-pre")
-    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    if args.offline:
+        tokenizer = BertTokenizer.from_pretrained(os.path.expanduser("~/data/transformers/bert-base-uncased"))
+        model = VisualBertForPreTraining.from_pretrained(os.path.expanduser("~/data/transformers/uclanlp/visualbert-nlvr2-coco-pre"))
+    else:
+        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+        tokenizer.save_pretrained(os.path.expanduser("~/data/transformers/bert-base-uncased"))
+
+        model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-nlvr2-coco-pre")
+        model.save_pretrained(os.path.expanduser("~/data/transformers/uclanlp/visualbert-nlvr2-coco-pre"))
 
     img_features = load_image_features(args.img_features_path)
 

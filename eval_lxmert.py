@@ -44,14 +44,19 @@ def load_tsv_image_features(fname, topk=None):
                 ('boxes', (boxes, 4), np.float32),
                 ('features', (boxes, -1), np.float32),
             ]
-            for key, shape, dtype in decode_config:
-                item[key] = np.frombuffer(base64.b64decode(item[key]), dtype=dtype)
-                item[key] = item[key].reshape(shape)
-                item[key].setflags(write=False)
+            #TODO: remove try/except block when data is clean
+            try:
+                for key, shape, dtype in decode_config:
+                    item[key] = np.frombuffer(base64.b64decode(item[key]), dtype=dtype)
+                    item[key] = item[key].reshape(shape)
+                    item[key].setflags(write=False)
 
-            data.append(item)
-            if topk is not None and len(data) == topk:
-                break
+                data.append(item)
+                if topk is not None and len(data) == topk:
+                    break
+            except Exception as exc:
+                 print(f"Warning: Couldn't load features for {item['img_id']}: ", end="")
+                 print(exc)
     print("Loaded %d images in file %s." % (len(data), fname))
 
     data_dict = {}
@@ -93,9 +98,10 @@ def get_classification_score(model, tokenizer, test_sentence, visual_features, c
 
     cross_relationship_score = outputs.cross_relationship_score
 
-    # Apply softmax and return probability for match:
+    # Apply softmax
     softmaxed = F.softmax(cross_relationship_score[0], dim=0)
-    return softmaxed[0].data
+    # return the probability for a match:
+    return softmaxed[1].data
 
 
 def get_args():
@@ -103,14 +109,22 @@ def get_args():
     parser.add_argument("--eval-set", type=str, required=True)
     parser.add_argument("--img-features-path", type=str, required=True)
 
+    parser.add_argument("--offline", action="store_true")
+
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
 
-    tokenizer = LxmertTokenizer.from_pretrained('unc-nlp/lxmert-base-uncased')
-    model = LxmertForPreTraining.from_pretrained('unc-nlp/lxmert-base-uncased')
+    if args.offline:
+        tokenizer = LxmertTokenizer.from_pretrained(os.path.expanduser("~/data/transformers/unc-nlp/lxmert-base-uncased"))
+        model = LxmertForPreTraining.from_pretrained(os.path.expanduser("~/data/transformers/unc-nlp/lxmert-base-uncased"))
+    else:
+        tokenizer = LxmertTokenizer.from_pretrained('unc-nlp/lxmert-base-uncased')
+        tokenizer.save_pretrained(os.path.expanduser("~/data/transformers/unc-nlp/lxmert-base-uncased"))
+        model = LxmertForPreTraining.from_pretrained('unc-nlp/lxmert-base-uncased')
+        model.save_pretrained(os.path.expanduser("~/data/transformers/unc-nlp/lxmert-base-uncased"))
 
     img_features = load_tsv_image_features(args.img_features_path)
 
