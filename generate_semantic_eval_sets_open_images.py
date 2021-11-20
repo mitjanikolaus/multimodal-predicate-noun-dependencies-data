@@ -212,7 +212,7 @@ def get_duplicate_sample(sample, eval_set, rel_label):
             and existing_sample["img_counterexample"] == sample["img_example"]
         ):
             # For spatial relationships we require also the object to be the same
-            if rel_label in RELATIONSHIPS_SPATIAL:
+            if sample["relationship_target"][rel_label] in RELATIONSHIPS_SPATIAL:
                 if (
                     existing_sample["relationship_target"][SUBJECT]
                     == sample["relationship_target"][SUBJECT]
