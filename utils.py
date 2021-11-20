@@ -266,6 +266,10 @@ for subj1, subj2 in SUBJECT_TUPLES:
     assert subj1 in SUBJECT_NAMES, f"{subj1} is misspelled"
     assert subj2 in SUBJECT_NAMES, f"{subj2} is misspelled"
 
+for rel1, rel2 in RELATIONSHIPS_TUPLES:
+    assert rel1 in RELATIONSHIP_NAMES, f"{rel1} is misspelled"
+    assert rel2 in RELATIONSHIP_NAMES, f"{rel2} is misspelled"
+
 SYNONYMS_LIST = [
     ["Table", "Desk", "Coffee table"],
     ["Mug", "Coffee cup"],
@@ -561,6 +565,8 @@ def generate_sentence_from_triplet(subject, predicate, object):
             object += "ting"
         elif object.endswith("e"):
             object = object[:-1] + "ing"
+        elif object.endswith("n"):
+            object += "ning"
         else:
             object += "ing"
     if (
@@ -572,6 +578,10 @@ def generate_sentence_from_triplet(subject, predicate, object):
 
     if "(made of)" in object:
         object = object.replace("(made of)", " made of ")
+
+    # Add third-person s to predicate
+    if predicate[-1] != "s" and predicate not in RELATIONSHIPS_SPATIAL:
+        predicate += "s"
 
     sentence = f"a {subject} {predicate} {object}"
 

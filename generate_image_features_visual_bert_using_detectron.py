@@ -25,6 +25,8 @@ from PIL import Image
 
 
 MIN_BOXES = 10
+
+# TODO: 144 in original paper
 MAX_BOXES = 100
 
 

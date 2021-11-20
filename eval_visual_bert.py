@@ -10,15 +10,16 @@ from eval_model import eval_2afc
 
 
 def get_classification_score(model, tokenizer, test_sentence, visual_features, correct_sentence):
-    # TODO: first sentence should not influence 2AFC outcome!
+    # TODO: first sentence should not influence 2AFC outcome.
     inputs = tokenizer(correct_sentence, test_sentence, return_tensors="pt")
 
     decoded_sequence = tokenizer.decode(inputs["input_ids"][0])
     print(decoded_sequence)
 
     visual_embeds = visual_features.unsqueeze(0)
+    # visual_embeds = visual_features["roi_features"]
 
-    # TODO: verify visual token type IDs
+    # TODO: verify visual token type IDs!
     visual_token_type_ids = torch.ones(visual_embeds.shape[:-1], dtype=torch.long)
     visual_attention_mask = torch.ones(visual_embeds.shape[:-1], dtype=torch.float)
 
@@ -30,6 +31,7 @@ def get_classification_score(model, tokenizer, test_sentence, visual_features, c
 
     outputs = model(**inputs)
 
+    # TODO: it seems like the True/False mapping is probably inverted?
     # Labels for computing the sentence-image prediction (classification) loss. Input should be a sequence
     # pair (see :obj:`input_ids` docstring) Indices should be in ``[0, 1]``:
     #
@@ -62,15 +64,21 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
 
+    model_name = "uclanlp/visualbert-nlvr2-coco-pre"
+    # model_name = "uclanlp/visualbert-vqa-coco-pre" #2048 dimenional image features.
+    # model_name = "uclanlp/visualbert-vqa" #2048 dimenional image features.
+
+    # model_name = "uclanlp/visualbert-nlvr2" # not pretrained!
+
     if args.offline:
         tokenizer = BertTokenizer.from_pretrained(os.path.expanduser("~/data/transformers/bert-base-uncased"))
-        model = VisualBertForPreTraining.from_pretrained(os.path.expanduser("~/data/transformers/uclanlp/visualbert-nlvr2-coco-pre"))
+        model = VisualBertForPreTraining.from_pretrained(os.path.expanduser("~/data/transformers/"+model_name))
     else:
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         tokenizer.save_pretrained(os.path.expanduser("~/data/transformers/bert-base-uncased"))
 
-        model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-nlvr2-coco-pre")
-        model.save_pretrained(os.path.expanduser("~/data/transformers/uclanlp/visualbert-nlvr2-coco-pre"))
+        model = VisualBertForPreTraining.from_pretrained(model_name)
+        model.save_pretrained(os.path.expanduser("~/data/transformers/"+model_name))
 
     img_features = load_image_features(args.img_features_path)
 
