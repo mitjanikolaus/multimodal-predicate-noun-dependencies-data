@@ -93,12 +93,20 @@ def eval_2afc(model, tokenizer, img_features, classification_score_function, arg
             prob_target_match = classification_score_function(model, tokenizer, text_target, example_features, text_target)
             prob_distractor_match = classification_score_function(model, tokenizer, text_distractor, example_features, text_target)
 
-            if prob_target_match > prob_distractor_match:
-                result_example = "SUCCESS"
-                successes += 1
+            if args.strict_eval:
+                if prob_target_match >= 0.5 and prob_distractor_match < 0.5:
+                    result_example = "SUCCESS"
+                    successes += 1
+                else:
+                    result_example = "FAILURE"
+                    failures += 1
             else:
-                result_example = "FAILURE"
-                failures += 1
+                if prob_target_match > prob_distractor_match:
+                    result_example = "SUCCESS"
+                    successes += 1
+                else:
+                    result_example = "FAILURE"
+                    failures += 1
 
             result_example += f" ({prob_target_match:.3f} vs. {prob_distractor_match:.3f})"
 
@@ -108,12 +116,20 @@ def eval_2afc(model, tokenizer, img_features, classification_score_function, arg
             prob_target_match = classification_score_function(model, tokenizer, text_target, counterexample_features, text_target)
             prob_distractor_match = classification_score_function(model, tokenizer, text_distractor, counterexample_features, text_target)
 
-            if prob_target_match > prob_distractor_match:
-                result_counterexample = "SUCCESS"
-                successes += 1
+            if args.strict_eval:
+                if prob_target_match >= 0.5 and prob_distractor_match < 0.5:
+                    result_counterexample = "SUCCESS"
+                    successes += 1
+                else:
+                    result_counterexample = "FAILURE"
+                    failures += 1
             else:
-                result_counterexample = "FAILURE"
-                failures += 1
+                if prob_target_match > prob_distractor_match:
+                    result_counterexample = "SUCCESS"
+                    successes += 1
+                else:
+                    result_counterexample = "FAILURE"
+                    failures += 1
 
             result_counterexample += f" ({prob_target_match:.3f} vs. {prob_distractor_match:.3f})"
 

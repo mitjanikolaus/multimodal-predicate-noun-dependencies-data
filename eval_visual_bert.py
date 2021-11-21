@@ -56,6 +56,8 @@ def get_args():
     parser.add_argument("--eval-set", type=str, required=True)
     parser.add_argument("--img-features-path", type=str, required=True)
 
+    parser.add_argument("--strict-eval", action="store_true", help="Evaluate using 0.5 probability threshold")
+
     parser.add_argument("--offline", action="store_true")
 
     return parser.parse_args()

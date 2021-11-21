@@ -569,15 +569,21 @@ def generate_sentence_from_triplet(subject, predicate, object):
             object += "ning"
         else:
             object += "ing"
+
+    if object == "Sun hat":
+        object = "hat"
+
     if (
         object
-        in OBJECTS_ANIMALS + OBJECTS_INSTRUMENTS + OBJECTS_VEHICLES + OBJECTS_OTHERS
+        in OBJECTS_ANIMALS + OBJECTS_INSTRUMENTS + OBJECTS_VEHICLES + OBJECTS_OTHERS + ["hat"]
     ):
         if object not in ["Glasses"]:
             object = "a " + object
 
     if "(made of)" in object:
         object = object.replace("(made of)", " made of ")
+
+
 
     # Add third-person s to predicate
     if predicate[-1] != "s" and predicate not in RELATIONSHIPS_SPATIAL:
