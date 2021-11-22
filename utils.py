@@ -589,6 +589,7 @@ def generate_sentence_from_triplet(subject, predicate, object):
     if predicate[-1] != "s" and predicate not in RELATIONSHIPS_SPATIAL:
         predicate += "s"
 
+    # TODO: definite vs. indefinite article? affects performance!
     sentence = f"a {subject} {predicate} {object}"
 
     # Add full stop
