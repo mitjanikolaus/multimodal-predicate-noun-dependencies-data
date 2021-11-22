@@ -22,7 +22,7 @@ def load_bottom_up_image_features(fname, topk=None):
     """
     csv.field_size_limit(sys.maxsize)
 
-    data = []
+    data_dict = {}
     print("Start to load Faster-RCNN detected objects from %s" % fname)
     with open(fname) as f:
         reader = csv.DictReader(f, TSV_FIELDNAMES, delimiter="\t")
@@ -40,24 +40,15 @@ def load_bottom_up_image_features(fname, topk=None):
                 ('boxes', (boxes, 4), np.float32),
                 ('features', (boxes, -1), np.float32),
             ]
-            #TODO: remove try/except block when data is clean
-            try:
-                for key, shape, dtype in decode_config:
-                    item[key] = np.frombuffer(base64.b64decode(item[key]), dtype=dtype)
-                    item[key] = item[key].reshape(shape)
-                    item[key].setflags(write=False)
+            for key, shape, dtype in decode_config:
+                item[key] = np.frombuffer(base64.b64decode(item[key]), dtype=dtype)
+                item[key] = item[key].reshape(shape)
+                item[key].setflags(write=False)
 
-                data.append(item)
-                if topk is not None and len(data) == topk:
-                    break
-            except Exception as exc:
-                 print(f"Warning: Couldn't load features for {item['img_id']}: ", end="")
-                 print(exc)
-    print("Loaded %d images in file %s." % (len(data), fname))
-
-    data_dict = {}
-    for img_feat in data:
-        data_dict[os.path.basename(img_feat["img_id"])] = img_feat
+            data_dict[item["img_id"]] = item
+            if topk is not None and len(data_dict) == topk:
+                break
+    print("Loaded %d images in file %s." % (len(data_dict), fname))
 
     return data_dict
 

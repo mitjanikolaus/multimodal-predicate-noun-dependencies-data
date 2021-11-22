@@ -101,7 +101,7 @@ def get_detections_from_im(net, path, conf_thresh=0.2):
     attrs_conf = np.max(attr_prob[keep_boxes][:, 1:], axis=1)
 
     return {
-        "img_id": path,
+        "img_id": os.path.basename(path),
         "img_h": np.size(im, 0),
         "img_w": np.size(im, 1),
         "objects_id": base64.b64encode(objects),  # int64
