@@ -468,7 +468,6 @@ def show_image_pair(
         va="top",
         transform=ax.transAxes,
     )
-    print(ax.get_ylim())
 
     if result_example:
         ax.text(
