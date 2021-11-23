@@ -4,7 +4,6 @@ import threading
 
 from fiftyone import ViewField as F
 import fiftyone.zoo as foz
-import numpy as np
 
 from PIL import Image as PIL_Image, ImageFilter, ImageStat
 from tqdm import tqdm
@@ -321,155 +320,143 @@ def get_counterexample_key(relationship_target, rel_label):
     return counterexample_key
 
 
-class ProcessSampleThread(threading.Thread):
-    def __init__(self, example, matching_images, target_subject, distractor_subject, counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set, thread_lock_counterexample_cache):
-        threading.Thread.__init__(self)
-        self.example = example
-        self.matching_images = matching_images
-        self.target_subject = target_subject
-        self.distractor_subject = distractor_subject
-        self.counterexample_cache = counterexample_cache
-        self.eval_set = eval_set
-        self.check_sharpness = check_sharpness
-        self.thread_lock_eval_set = thread_lock_eval_set
-        self.thread_lock_counterexample_cache = thread_lock_counterexample_cache
+def process_sample_subj(example, matching_images, target_subject, distractor_subject, counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set, thread_lock_counterexample_cache):
+    # Look for relationships both based on REL and on OBJECT (label and Label2)
+    for rel_label in [REL, OBJECT]:
+        candidate_relationships = [
+            rel
+            for rel in example.relationships.detections
+            if rel[SUBJECT] in SYNONYMS[target_subject]
+               and rel[rel_label] in VALID_NAMES[rel_label]
+               and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
+               and not is_subj_rel_in_image(
+                example, distractor_subject, rel[rel_label], rel_label
+            )  # check that distractor IS NOT in same image
+        ]
+        candidate_relationships = drop_synonyms(
+            candidate_relationships, rel_label
+        )
 
-    def run(self):
-        # Look for relationships both based on REL and on OBJECT (label and Label2)
-        for rel_label in [REL, OBJECT]:
-            candidate_relationships = [
-                rel
-                for rel in self.example.relationships.detections
-                if rel[SUBJECT] in SYNONYMS[self.target_subject]
-                   and rel[rel_label] in VALID_NAMES[rel_label]
-                   and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
-                   and not is_subj_rel_in_image(
-                    self.example, self.distractor_subject, rel[rel_label], rel_label
-                )  # check that distractor IS NOT in same image
-            ]
-            candidate_relationships = drop_synonyms(
-                candidate_relationships, rel_label
+        for relationship_target in candidate_relationships:
+            # check that visual distractor IS in image
+            rels_visual_distractor = find_subj_with_other_rel(
+                example, distractor_subject, relationship_target, rel_label
             )
+            rels_visual_distractor = drop_synonyms(
+                rels_visual_distractor, rel_label
+            )
+            if len(rels_visual_distractor) > 0:
 
-            for relationship_target in candidate_relationships:
-                # check that visual distractor IS in image
-                rels_visual_distractor = find_subj_with_other_rel(
-                    self.example, self.distractor_subject, relationship_target, rel_label
-                )
-                rels_visual_distractor = drop_synonyms(
-                    rels_visual_distractor, rel_label
-                )
-                if len(rels_visual_distractor) > 0:
+                if not check_sharpness or relationships_are_sharp(
+                        example, [relationship_target],
+                ):
+                    # Start looking for counterexample image..
 
-                    if not self.check_sharpness or relationships_are_sharp(
-                            self.example, [relationship_target],
-                    ):
-                        # Start looking for counterexample image..
+                    counterexample_key = get_counterexample_key(
+                        relationship_target, rel_label
+                    )
 
-                        counterexample_key = get_counterexample_key(
-                            relationship_target, rel_label
+                    if counterexample_key not in counterexample_cache:
+                        counterex_images = get_counterexample_images_subj(
+                            matching_images,
+                            distractor_subject,
+                            relationship_target,
+                            rel_label,
+                        )
+                        thread_lock_counterexample_cache.acquire()
+                        counterexample_cache[
+                            counterexample_key
+                        ] = counterex_images
+                        thread_lock_counterexample_cache.release()
+
+                    matching_images_counterexample = counterexample_cache[
+                        counterexample_key
+                    ]
+
+                    for counterexample in matching_images_counterexample:
+
+                        counterexample_relationships = [
+                            rel
+                            for rel in counterexample.relationships.detections
+                            if rel[SUBJECT] in SYNONYMS[distractor_subject]
+                               and rel[rel_label]
+                               in SYNONYMS[relationship_target[rel_label]]
+                               and get_bounding_box_size(rel)
+                               > THRESHOLD_MIN_BB_SIZE
+                        ]
+                        counterexample_relationships = drop_synonyms(
+                            counterexample_relationships, rel_label,
                         )
 
-                        if counterexample_key not in self.counterexample_cache:
-                            self.thread_lock_counterexample_cache.acquire()
-                            self.counterexample_cache[
-                                counterexample_key
-                            ] = get_counterexample_images_subj(
-                                self.matching_images,
-                                self.distractor_subject,
-                                relationship_target,
+                        for (
+                                counterex_rel_target
+                        ) in counterexample_relationships:
+
+                            # check that visual distractor IS in image
+                            counterex_rels_visual_distractor = find_subj_with_other_rel(
+                                counterexample,
+                                target_subject,
+                                counterex_rel_target,
                                 rel_label,
                             )
-                            self.thread_lock_counterexample_cache.release()
-
-                        matching_images_counterexample = self.counterexample_cache[
-                            counterexample_key
-                        ]
-
-                        for counterexample in matching_images_counterexample:
-
-                            counterexample_relationships = [
-                                rel
-                                for rel in counterexample.relationships.detections
-                                if rel[SUBJECT] in SYNONYMS[self.distractor_subject]
-                                   and rel[rel_label]
-                                   in SYNONYMS[relationship_target[rel_label]]
-                                   and get_bounding_box_size(rel)
-                                   > THRESHOLD_MIN_BB_SIZE
-                            ]
-                            counterexample_relationships = drop_synonyms(
-                                counterexample_relationships, rel_label,
+                            counterex_rels_visual_distractor = drop_synonyms(
+                                counterex_rels_visual_distractor, rel_label
                             )
-
-                            for (
-                                    counterex_rel_target
-                            ) in counterexample_relationships:
-
-                                # check that visual distractor IS in image
-                                counterex_rels_visual_distractor = find_subj_with_other_rel(
-                                    counterexample,
-                                    self.target_subject,
-                                    counterex_rel_target,
-                                    rel_label,
-                                )
-                                counterex_rels_visual_distractor = drop_synonyms(
-                                    counterex_rels_visual_distractor, rel_label
-                                )
-                                if len(counterex_rels_visual_distractor) > 0:
+                            if len(counterex_rels_visual_distractor) > 0:
+                                for (
+                                        rel_visual_distractor
+                                ) in rels_visual_distractor:
                                     for (
-                                            rel_visual_distractor
-                                    ) in rels_visual_distractor:
-                                        for (
-                                                counterex_rel_visual_distractor
-                                        ) in counterex_rels_visual_distractor:
+                                            counterex_rel_visual_distractor
+                                    ) in counterex_rels_visual_distractor:
 
-                                            if not self.check_sharpness or (
-                                                    relationships_are_sharp(
-                                                        counterexample,
-                                                        [
-                                                            counterex_rel_target,
-                                                            counterex_rel_visual_distractor,
-                                                        ],
-                                                    )
-                                                    and relationships_are_sharp(
-                                                        self.example,
-                                                        [rel_visual_distractor],
-                                                    ),
-                                            ):
-
-                                                sample = {
-                                                    "img_example": self.example.filepath,
-                                                    "img_counterexample": counterexample.filepath,
-                                                    "relationship_target": relationship_target,
-                                                    "relationship_visual_distractor": rel_visual_distractor,
-                                                    "counterexample_relationship_target": counterex_rel_target,
-                                                    "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
-                                                    "rel_label": rel_label,
-                                                }
-                                                duplicate_sample = get_duplicate_sample(
-                                                    sample, self.eval_set, sample["rel_label"]
+                                        if not check_sharpness or (
+                                                relationships_are_sharp(
+                                                    counterexample,
+                                                    [
+                                                        counterex_rel_target,
+                                                        counterex_rel_visual_distractor,
+                                                    ],
                                                 )
+                                                and relationships_are_sharp(
+                                                    example,
+                                                    [rel_visual_distractor],
+                                                ),
+                                        ):
 
-                                                # Replace current sample if new one has bigger objects
-                                                if duplicate_sample is not None:
-                                                    if get_sum_of_bounding_box_sizes(
-                                                            sample
-                                                    ) > get_sum_of_bounding_box_sizes(
+                                            sample = {
+                                                "img_example": example.filepath,
+                                                "img_counterexample": counterexample.filepath,
+                                                "relationship_target": relationship_target,
+                                                "relationship_visual_distractor": rel_visual_distractor,
+                                                "counterexample_relationship_target": counterex_rel_target,
+                                                "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
+                                                "rel_label": rel_label,
+                                            }
+                                            duplicate_sample = get_duplicate_sample(
+                                                sample, eval_set, sample["rel_label"]
+                                            )
+
+                                            # Replace current sample if new one has bigger objects
+                                            if duplicate_sample is not None:
+                                                if get_sum_of_bounding_box_sizes(
+                                                        sample
+                                                ) > get_sum_of_bounding_box_sizes(
+                                                    duplicate_sample
+                                                ):
+                                                    thread_lock_eval_set.acquire()
+                                                    eval_set.remove(
                                                         duplicate_sample
-                                                    ):
-                                                        self.thread_lock_eval_set.acquire()
-                                                        self.eval_set.remove(
-                                                            duplicate_sample
-                                                        )
-                                                        self.eval_set.append(sample)
-                                                        self.thread_lock_eval_set.release()
+                                                    )
+                                                    eval_set.append(sample)
+                                                    thread_lock_eval_set.release()
 
-                                                else:
-                                                    self.thread_lock_eval_set.acquire()
-                                                    # Add example and counter-example
-                                                    self.eval_set.append(sample)
-                                                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
-                                                    self.thread_lock_eval_set.release()
+                                            else:
+                                                thread_lock_eval_set.acquire()
+                                                # Add example and counter-example
+                                                eval_set.append(sample)
+                                                # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+                                                thread_lock_eval_set.release()
 
 
 def generate_eval_sets_from_subject_tuples(
@@ -507,14 +494,13 @@ def generate_eval_sets_from_subject_tuples(
         thread_lock_counterexample_cache = threading.Lock()
 
         threads = []
-        for example in tqdm(matching_images):
-            thread = ProcessSampleThread(example, matching_images, target_subject, distractor_subject, counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set, thread_lock_counterexample_cache)
-            threads.append(thread)
-
-        for t in threads:
+        for example in matching_images:
+            t = threading.Thread(target=process_sample_subj,
+                                 args=(example, matching_images, target_subject, distractor_subject, counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set, thread_lock_counterexample_cache))
+            threads.append(t)
             t.start()
 
-        for t in threads:
+        for t in tqdm(threads):
             t.join()
 
         if len(eval_set) > 0:
@@ -526,6 +512,133 @@ def generate_eval_sets_from_subject_tuples(
             )
 
     return eval_sets
+
+
+def process_sample_rel_or_obj(example, rel_label, matching_images, target_attribute, distractor_attribute,
+                                         counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set,
+                                         thread_lock_counterexample_cache):
+    candidate_relationships = [
+        rel
+        for rel in example.relationships.detections
+        if rel[rel_label] in SYNONYMS[target_attribute]
+        and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
+        and not is_subj_rel_in_image(
+            example, rel[SUBJECT], distractor_attribute, rel_label
+        )  # check that distractor IS NOT in same image
+    ]
+    candidate_relationships = drop_synonyms(candidate_relationships, SUBJECT)
+
+    for relationship_target in candidate_relationships:
+        target_subject = relationship_target[SUBJECT]
+
+        # check that visual distractor IS in image
+        rels_visual_distractor = find_other_subj_with_attr(
+            example, relationship_target, distractor_attribute, rel_label
+        )
+        rels_visual_distractor = drop_synonyms(rels_visual_distractor, SUBJECT)
+
+        if len(rels_visual_distractor) > 0:
+
+            if not check_sharpness or relationships_are_sharp(
+                example, [relationship_target],
+            ):
+
+                # Start looking for counterexample image..
+                counterexample_key = get_counterexample_key(
+                    relationship_target, SUBJECT
+                )
+
+                if counterexample_key not in counterexample_cache:
+                    counterx_images = get_counterexample_images_attr(
+                        matching_images,
+                        distractor_attribute,
+                        relationship_target,
+                        rel_label,
+                    )
+                    thread_lock_counterexample_cache.acquire()
+                    counterexample_cache[
+                        counterexample_key
+                    ] = counterx_images
+                    thread_lock_counterexample_cache.release()
+
+                matching_images_counterexample = counterexample_cache[
+                    counterexample_key
+                ]
+
+                for counterexample in matching_images_counterexample:
+
+                    counterexample_relationships = [
+                        rel
+                        for rel in counterexample.relationships.detections
+                        if rel[SUBJECT] in SYNONYMS[target_subject]
+                        and rel[rel_label] in SYNONYMS[distractor_attribute]
+                        and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
+                    ]
+                    counterexample_relationships = drop_synonyms(
+                        counterexample_relationships, SUBJECT,
+                    )
+
+                    for counterex_rel_target in counterexample_relationships:
+                        # check that visual distractor IS in image
+                        counterex_rels_visual_distractor = find_other_subj_with_attr(
+                            counterexample,
+                            counterex_rel_target,
+                            target_attribute,
+                            rel_label,
+                        )
+                        counterex_rels_visual_distractor = drop_synonyms(
+                            counterex_rels_visual_distractor, SUBJECT,
+                        )
+                        if len(counterex_rels_visual_distractor) > 0:
+                            for rel_visual_distractor in rels_visual_distractor:
+                                for (
+                                    counterex_rel_visual_distractor
+                                ) in counterex_rels_visual_distractor:
+                                    if not check_sharpness or (
+                                        relationships_are_sharp(
+                                            counterexample,
+                                            [
+                                                counterex_rel_target,
+                                                counterex_rel_visual_distractor,
+                                            ],
+                                        )
+                                        and relationships_are_sharp(
+                                            example, [rel_visual_distractor],
+                                        ),
+                                    ):
+
+                                        sample = {
+                                            "img_example": example.filepath,
+                                            "img_counterexample": counterexample.filepath,
+                                            "relationship_target": relationship_target,
+                                            "relationship_visual_distractor": rel_visual_distractor,
+                                            "counterexample_relationship_target": counterex_rel_target,
+                                            "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
+                                            "rel_label": rel_label,
+                                        }
+                                        duplicate_sample = get_duplicate_sample(
+                                            sample, eval_set, rel_label
+                                        )
+
+                                        # Replace current sample if new one has bigger objects
+                                        if duplicate_sample is not None:
+                                            if get_sum_of_bounding_box_sizes(
+                                                sample
+                                            ) > get_sum_of_bounding_box_sizes(
+                                                duplicate_sample
+                                            ):
+                                                thread_lock_eval_set.acquire()
+                                                eval_set.remove(
+                                                    duplicate_sample
+                                                )
+                                                eval_set.append(sample)
+                                                thread_lock_eval_set.release()
+                                        else:
+                                            # Add tuple of example and counter-example
+                                            thread_lock_eval_set.acquire()
+                                            eval_set.append(sample)
+                                            thread_lock_eval_set.release()
+                                            # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
 
 
 def generate_eval_sets_from_rel_or_object_tuples(
@@ -560,122 +673,19 @@ def generate_eval_sets_from_rel_or_object_tuples(
             )
         )
 
-        for example in tqdm(matching_images):
-            candidate_relationships = [
-                rel
-                for rel in example.relationships.detections
-                if rel[rel_label] in SYNONYMS[target_attribute]
-                and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
-                and not is_subj_rel_in_image(
-                    example, rel[SUBJECT], distractor_attribute, rel_label
-                )  # check that distractor IS NOT in same image
-            ]
-            candidate_relationships = drop_synonyms(candidate_relationships, SUBJECT)
+        thread_lock_eval_set = threading.Lock()
+        thread_lock_counterexample_cache = threading.Lock()
 
-            for relationship_target in candidate_relationships:
-                target_subject = relationship_target[SUBJECT]
+        threads = []
+        for example in matching_images:
+            t = threading.Thread(target=process_sample_rel_or_obj, args=(example, rel_label, matching_images, target_attribute, distractor_attribute,
+                                         counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set,
+                                         thread_lock_counterexample_cache))
+            t.start()
+            threads.append(t)
 
-                # check that visual distractor IS in image
-                rels_visual_distractor = find_other_subj_with_attr(
-                    example, relationship_target, distractor_attribute, rel_label
-                )
-                rels_visual_distractor = drop_synonyms(rels_visual_distractor, SUBJECT)
-
-                if len(rels_visual_distractor) > 0:
-
-                    if not check_sharpness or relationships_are_sharp(
-                        example, [relationship_target],
-                    ):
-
-                        # Start looking for counterexample image..
-                        counterexample_key = get_counterexample_key(
-                            relationship_target, SUBJECT
-                        )
-
-                        if counterexample_key not in counterexample_cache:
-                            counterexample_cache[
-                                counterexample_key
-                            ] = get_counterexample_images_attr(
-                                matching_images,
-                                distractor_attribute,
-                                relationship_target,
-                                rel_label,
-                            )
-
-                        matching_images_counterexample = counterexample_cache[
-                            counterexample_key
-                        ]
-
-                        for counterexample in matching_images_counterexample:
-
-                            counterexample_relationships = [
-                                rel
-                                for rel in counterexample.relationships.detections
-                                if rel[SUBJECT] in SYNONYMS[target_subject]
-                                and rel[rel_label] in SYNONYMS[distractor_attribute]
-                                and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
-                            ]
-                            counterexample_relationships = drop_synonyms(
-                                counterexample_relationships, SUBJECT,
-                            )
-
-                            for counterex_rel_target in counterexample_relationships:
-                                # check that visual distractor IS in image
-                                counterex_rels_visual_distractor = find_other_subj_with_attr(
-                                    counterexample,
-                                    counterex_rel_target,
-                                    target_attribute,
-                                    rel_label,
-                                )
-                                counterex_rels_visual_distractor = drop_synonyms(
-                                    counterex_rels_visual_distractor, SUBJECT,
-                                )
-                                if len(counterex_rels_visual_distractor) > 0:
-                                    for rel_visual_distractor in rels_visual_distractor:
-                                        for (
-                                            counterex_rel_visual_distractor
-                                        ) in counterex_rels_visual_distractor:
-                                            if not check_sharpness or (
-                                                relationships_are_sharp(
-                                                    counterexample,
-                                                    [
-                                                        counterex_rel_target,
-                                                        counterex_rel_visual_distractor,
-                                                    ],
-                                                )
-                                                and relationships_are_sharp(
-                                                    example, [rel_visual_distractor],
-                                                ),
-                                            ):
-
-                                                sample = {
-                                                    "img_example": example.filepath,
-                                                    "img_counterexample": counterexample.filepath,
-                                                    "relationship_target": relationship_target,
-                                                    "relationship_visual_distractor": rel_visual_distractor,
-                                                    "counterexample_relationship_target": counterex_rel_target,
-                                                    "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
-                                                    "rel_label": rel_label,
-                                                }
-                                                duplicate_sample = get_duplicate_sample(
-                                                    sample, eval_set, rel_label
-                                                )
-
-                                                # Replace current sample if new one has bigger objects
-                                                if duplicate_sample is not None:
-                                                    if get_sum_of_bounding_box_sizes(
-                                                        sample
-                                                    ) > get_sum_of_bounding_box_sizes(
-                                                        duplicate_sample
-                                                    ):
-                                                        eval_set.remove(
-                                                            duplicate_sample
-                                                        )
-                                                        eval_set.append(sample)
-                                                else:
-                                                    # Add tuple of example and counter-example
-                                                    eval_set.append(sample)
-                                                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+        for t in tqdm(threads):
+            t.join()
 
         if len(eval_set) > 0:
             eval_sets[target_tuple] = eval_set
