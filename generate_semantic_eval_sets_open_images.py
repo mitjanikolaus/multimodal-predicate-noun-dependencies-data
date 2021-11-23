@@ -494,7 +494,7 @@ def generate_eval_sets_from_subject_tuples(
         thread_lock_counterexample_cache = threading.Lock()
 
         threads = []
-        for example in matching_images:
+        for example in tqdm(matching_images):
             t = threading.Thread(target=process_sample_subj,
                                  args=(example, matching_images, target_subject, distractor_subject, counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set, thread_lock_counterexample_cache))
             threads.append(t)
@@ -677,7 +677,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
         thread_lock_counterexample_cache = threading.Lock()
 
         threads = []
-        for example in matching_images:
+        for example in tqdm(matching_images):
             t = threading.Thread(target=process_sample_rel_or_obj, args=(example, rel_label, matching_images, target_attribute, distractor_attribute,
                                          counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set,
                                          thread_lock_counterexample_cache))
