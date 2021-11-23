@@ -63,14 +63,8 @@ if __name__ == "__main__":
     args = get_args()
 
     model_name = "unc-nlp/lxmert-base-uncased"
-    if args.offline:
-        tokenizer = LxmertTokenizer.from_pretrained(os.path.expanduser("~/data/transformers/"+model_name))
-        model = LxmertForPreTraining.from_pretrained(os.path.expanduser("~/data/transformers/"+model_name))
-    else:
-        tokenizer = LxmertTokenizer.from_pretrained(model_name)
-        tokenizer.save_pretrained(os.path.expanduser("~/data/transformers/"+model_name))
-        model = LxmertForPreTraining.from_pretrained(model_name)
-        model.save_pretrained(os.path.expanduser("~/data/transformers/"+model_name))
+    tokenizer = LxmertTokenizer.from_pretrained(model_name, local_files_only=args.offline)
+    model = LxmertForPreTraining.from_pretrained(model_name, local_files_only=args.offline)
 
     img_features = load_bottom_up_image_features(args.img_features_path)
 
