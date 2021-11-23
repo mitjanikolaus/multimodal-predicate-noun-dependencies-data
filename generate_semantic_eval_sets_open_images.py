@@ -19,7 +19,8 @@ from utils import (
     RELATIONSHIPS_TUPLES,
     RELATIONSHIPS_SPATIAL,
     BOUNDING_BOX,
-    IMAGE_RELATIONSHIPS, high_bounding_box_overlap,
+    IMAGE_RELATIONSHIPS,
+    high_bounding_box_overlap,
 )
 
 
@@ -128,11 +129,19 @@ def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label)
         for relationship in sample.relationships.detections:
             if relationship[SUBJECT] in ["Boy", "Man"] and relationship_target[
                 SUBJECT
-            ] in ["Boy", "Man",]:
+            ] in [
+                "Boy",
+                "Man",
+            ]:
                 continue
-            if relationship[SUBJECT] in ["Girl", "Woman",] and relationship_target[
-                SUBJECT
-            ] in ["Girl", "Woman"]:
+            if (
+                relationship[SUBJECT]
+                in [
+                    "Girl",
+                    "Woman",
+                ]
+                and relationship_target[SUBJECT] in ["Girl", "Woman"]
+            ):
                 continue
             if (
                 relationship[SUBJECT] not in SYNONYMS[relationship_target[SUBJECT]]
@@ -274,7 +283,10 @@ def get_counterexample_images_subj(
 
 
 def get_counterexample_images_attr(
-    matching_images, distractor_attribute, relationship_target, rel_label,
+    matching_images,
+    distractor_attribute,
+    relationship_target,
+    rel_label,
 ):
     # check that counterexample relation is in image
     is_counterexample_relation = F(SUBJECT).is_in(
@@ -320,35 +332,42 @@ def get_counterexample_key(relationship_target, rel_label):
     return counterexample_key
 
 
-def process_sample_subj(example, matching_images, target_subject, distractor_subject, counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set, thread_lock_counterexample_cache):
+def process_sample_subj(
+    example,
+    matching_images,
+    target_subject,
+    distractor_subject,
+    counterexample_cache,
+    eval_set,
+    check_sharpness,
+    thread_lock_eval_set,
+    thread_lock_counterexample_cache,
+):
     # Look for relationships both based on REL and on OBJECT (label and Label2)
     for rel_label in [REL, OBJECT]:
         candidate_relationships = [
             rel
             for rel in example.relationships.detections
             if rel[SUBJECT] in SYNONYMS[target_subject]
-               and rel[rel_label] in VALID_NAMES[rel_label]
-               and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
-               and not is_subj_rel_in_image(
+            and rel[rel_label] in VALID_NAMES[rel_label]
+            and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
+            and not is_subj_rel_in_image(
                 example, distractor_subject, rel[rel_label], rel_label
             )  # check that distractor IS NOT in same image
         ]
-        candidate_relationships = drop_synonyms(
-            candidate_relationships, rel_label
-        )
+        candidate_relationships = drop_synonyms(candidate_relationships, rel_label)
 
         for relationship_target in candidate_relationships:
             # check that visual distractor IS in image
             rels_visual_distractor = find_subj_with_other_rel(
                 example, distractor_subject, relationship_target, rel_label
             )
-            rels_visual_distractor = drop_synonyms(
-                rels_visual_distractor, rel_label
-            )
+            rels_visual_distractor = drop_synonyms(rels_visual_distractor, rel_label)
             if len(rels_visual_distractor) > 0:
 
                 if not check_sharpness or relationships_are_sharp(
-                        example, [relationship_target],
+                    example,
+                    [relationship_target],
                 ):
                     # Start looking for counterexample image..
 
@@ -364,9 +383,7 @@ def process_sample_subj(example, matching_images, target_subject, distractor_sub
                             rel_label,
                         )
                         thread_lock_counterexample_cache.acquire()
-                        counterexample_cache[
-                            counterexample_key
-                        ] = counterex_images
+                        counterexample_cache[counterexample_key] = counterex_images
                         thread_lock_counterexample_cache.release()
 
                     matching_images_counterexample = counterexample_cache[
@@ -379,18 +396,16 @@ def process_sample_subj(example, matching_images, target_subject, distractor_sub
                             rel
                             for rel in counterexample.relationships.detections
                             if rel[SUBJECT] in SYNONYMS[distractor_subject]
-                               and rel[rel_label]
-                               in SYNONYMS[relationship_target[rel_label]]
-                               and get_bounding_box_size(rel)
-                               > THRESHOLD_MIN_BB_SIZE
+                            and rel[rel_label]
+                            in SYNONYMS[relationship_target[rel_label]]
+                            and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
                         ]
                         counterexample_relationships = drop_synonyms(
-                            counterexample_relationships, rel_label,
+                            counterexample_relationships,
+                            rel_label,
                         )
 
-                        for (
-                                counterex_rel_target
-                        ) in counterexample_relationships:
+                        for counterex_rel_target in counterexample_relationships:
 
                             # check that visual distractor IS in image
                             counterex_rels_visual_distractor = find_subj_with_other_rel(
@@ -403,25 +418,23 @@ def process_sample_subj(example, matching_images, target_subject, distractor_sub
                                 counterex_rels_visual_distractor, rel_label
                             )
                             if len(counterex_rels_visual_distractor) > 0:
-                                for (
-                                        rel_visual_distractor
-                                ) in rels_visual_distractor:
+                                for rel_visual_distractor in rels_visual_distractor:
                                     for (
-                                            counterex_rel_visual_distractor
+                                        counterex_rel_visual_distractor
                                     ) in counterex_rels_visual_distractor:
 
                                         if not check_sharpness or (
-                                                relationships_are_sharp(
-                                                    counterexample,
-                                                    [
-                                                        counterex_rel_target,
-                                                        counterex_rel_visual_distractor,
-                                                    ],
-                                                )
-                                                and relationships_are_sharp(
-                                                    example,
-                                                    [rel_visual_distractor],
-                                                ),
+                                            relationships_are_sharp(
+                                                counterexample,
+                                                [
+                                                    counterex_rel_target,
+                                                    counterex_rel_visual_distractor,
+                                                ],
+                                            )
+                                            and relationships_are_sharp(
+                                                example,
+                                                [rel_visual_distractor],
+                                            ),
                                         ):
 
                                             sample = {
@@ -440,14 +453,12 @@ def process_sample_subj(example, matching_images, target_subject, distractor_sub
                                             # Replace current sample if new one has bigger objects
                                             if duplicate_sample is not None:
                                                 if get_sum_of_bounding_box_sizes(
-                                                        sample
+                                                    sample
                                                 ) > get_sum_of_bounding_box_sizes(
                                                     duplicate_sample
                                                 ):
                                                     thread_lock_eval_set.acquire()
-                                                    eval_set.remove(
-                                                        duplicate_sample
-                                                    )
+                                                    eval_set.remove(duplicate_sample)
                                                     eval_set.append(sample)
                                                     thread_lock_eval_set.release()
 
@@ -495,8 +506,20 @@ def generate_eval_sets_from_subject_tuples(
 
         threads = []
         for example in tqdm(matching_images):
-            t = threading.Thread(target=process_sample_subj,
-                                 args=(example, matching_images, target_subject, distractor_subject, counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set, thread_lock_counterexample_cache))
+            t = threading.Thread(
+                target=process_sample_subj,
+                args=(
+                    example,
+                    matching_images,
+                    target_subject,
+                    distractor_subject,
+                    counterexample_cache,
+                    eval_set,
+                    check_sharpness,
+                    thread_lock_eval_set,
+                    thread_lock_counterexample_cache,
+                ),
+            )
             threads.append(t)
             t.start()
 
@@ -514,9 +537,18 @@ def generate_eval_sets_from_subject_tuples(
     return eval_sets
 
 
-def process_sample_rel_or_obj(example, rel_label, matching_images, target_attribute, distractor_attribute,
-                                         counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set,
-                                         thread_lock_counterexample_cache):
+def process_sample_rel_or_obj(
+    example,
+    rel_label,
+    matching_images,
+    target_attribute,
+    distractor_attribute,
+    counterexample_cache,
+    eval_set,
+    check_sharpness,
+    thread_lock_eval_set,
+    thread_lock_counterexample_cache,
+):
     candidate_relationships = [
         rel
         for rel in example.relationships.detections
@@ -540,7 +572,8 @@ def process_sample_rel_or_obj(example, rel_label, matching_images, target_attrib
         if len(rels_visual_distractor) > 0:
 
             if not check_sharpness or relationships_are_sharp(
-                example, [relationship_target],
+                example,
+                [relationship_target],
             ):
 
                 # Start looking for counterexample image..
@@ -556,9 +589,7 @@ def process_sample_rel_or_obj(example, rel_label, matching_images, target_attrib
                         rel_label,
                     )
                     thread_lock_counterexample_cache.acquire()
-                    counterexample_cache[
-                        counterexample_key
-                    ] = counterx_images
+                    counterexample_cache[counterexample_key] = counterx_images
                     thread_lock_counterexample_cache.release()
 
                 matching_images_counterexample = counterexample_cache[
@@ -575,7 +606,8 @@ def process_sample_rel_or_obj(example, rel_label, matching_images, target_attrib
                         and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
                     ]
                     counterexample_relationships = drop_synonyms(
-                        counterexample_relationships, SUBJECT,
+                        counterexample_relationships,
+                        SUBJECT,
                     )
 
                     for counterex_rel_target in counterexample_relationships:
@@ -587,7 +619,8 @@ def process_sample_rel_or_obj(example, rel_label, matching_images, target_attrib
                             rel_label,
                         )
                         counterex_rels_visual_distractor = drop_synonyms(
-                            counterex_rels_visual_distractor, SUBJECT,
+                            counterex_rels_visual_distractor,
+                            SUBJECT,
                         )
                         if len(counterex_rels_visual_distractor) > 0:
                             for rel_visual_distractor in rels_visual_distractor:
@@ -603,7 +636,8 @@ def process_sample_rel_or_obj(example, rel_label, matching_images, target_attrib
                                             ],
                                         )
                                         and relationships_are_sharp(
-                                            example, [rel_visual_distractor],
+                                            example,
+                                            [rel_visual_distractor],
                                         ),
                                     ):
 
@@ -628,9 +662,7 @@ def process_sample_rel_or_obj(example, rel_label, matching_images, target_attrib
                                                 duplicate_sample
                                             ):
                                                 thread_lock_eval_set.acquire()
-                                                eval_set.remove(
-                                                    duplicate_sample
-                                                )
+                                                eval_set.remove(duplicate_sample)
                                                 eval_set.append(sample)
                                                 thread_lock_eval_set.release()
                                         else:
@@ -678,9 +710,21 @@ def generate_eval_sets_from_rel_or_object_tuples(
 
         threads = []
         for example in tqdm(matching_images):
-            t = threading.Thread(target=process_sample_rel_or_obj, args=(example, rel_label, matching_images, target_attribute, distractor_attribute,
-                                         counterexample_cache, eval_set, check_sharpness, thread_lock_eval_set,
-                                         thread_lock_counterexample_cache))
+            t = threading.Thread(
+                target=process_sample_rel_or_obj,
+                args=(
+                    example,
+                    rel_label,
+                    matching_images,
+                    target_attribute,
+                    distractor_attribute,
+                    counterexample_cache,
+                    eval_set,
+                    check_sharpness,
+                    thread_lock_eval_set,
+                    thread_lock_counterexample_cache,
+                ),
+            )
             t.start()
             threads.append(t)
 
@@ -713,7 +757,9 @@ def parse_args():
         choices=["train", "validation", "test", None],
     )
     argparser.add_argument(
-        "--max-samples", type=int, default=None,
+        "--max-samples",
+        type=int,
+        default=None,
     )
     argparser.add_argument("--check-sharpness", default=False, action="store_true")
 
