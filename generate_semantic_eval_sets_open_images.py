@@ -475,7 +475,15 @@ def generate_eval_sets_from_subject_tuples(
         with Pool(processes=8) as pool:
             results = pool.starmap(process_sample_subj, tqdm(process_args, total=len(process_args)))
 
-        print("Processing results...")
+        if len(eval_set) > 0:
+            eval_sets[target_tuple] = eval_set
+            print("saving intermediate results..")
+            pickle.dump(eval_sets, open(file_name, "wb"))
+            print(
+                f"\nFound {len(eval_sets[target_tuple])} examples for {target_tuple}.\n"
+            )
+
+        print("Dropping duplicates...")
         for res_process in tqdm(results):
             for sample in res_process:
                 duplicate_sample = get_duplicate_sample(
