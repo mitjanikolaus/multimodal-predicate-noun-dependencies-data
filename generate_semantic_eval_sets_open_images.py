@@ -446,7 +446,7 @@ def generate_eval_sets_from_subject_tuples(
 
         # build index for faster dropping of duplicates
         all_results = []
-        for res_process in results:
+        for res_process in tqdm(results):
             for sample in res_process:
                 all_results.append((get_index_key(sample), sample))
         if len(all_results) > 0:
@@ -637,7 +637,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
 
         # build index for faster dropping of duplicates
         all_results = []
-        for res_process in results:
+        for res_process in tqdm(results):
             for sample in res_process:
                 all_results.append((get_index_key(sample), sample))
 
