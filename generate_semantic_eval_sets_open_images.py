@@ -1,6 +1,5 @@
 import argparse
 import pickle
-import threading
 from multiprocessing.pool import Pool
 
 from fiftyone import ViewField as F
@@ -105,7 +104,7 @@ def relationships_are_sharp(sample, rels):
     img_data = PIL_Image.open(sample.filepath)
     for relationship in rels:
         sharpness_quotient = get_sharpness_quotient_of_bounding_box(
-            img_data, relationship.bounding_box
+            img_data, relationship[BOUNDING_BOX]
         )
         if sharpness_quotient <= THRESHOLD_MIN_BB_SHARPNESS:
             return False
@@ -125,8 +124,8 @@ def is_subj_rel_in_image(sample, subject, rel_value, rel_label):
 
 def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label):
     rels = []
-    if sample.relationships:
-        for relationship in sample.relationships.detections:
+    if sample["relationships"]:
+        for relationship in sample["relationships"]:
             if relationship[SUBJECT] in ["Boy", "Man"] and relationship_target[
                 SUBJECT
             ] in [
@@ -156,7 +155,7 @@ def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label)
                     if get_bounding_box_size(relationship) > THRESHOLD_MIN_BB_SIZE:
                         # Make sure the bounding boxes are not actually the same object
                         if not high_bounding_box_overlap(
-                            relationship.bounding_box, relationship_target.bounding_box
+                            relationship[BOUNDING_BOX], relationship_target[BOUNDING_BOX]
                         ):
                             # Make sure the size difference to the target object is not too big
                             size_target = get_bounding_box_size(relationship_target)
@@ -193,7 +192,7 @@ def find_subj_with_other_rel(sample, subject, relationship_target, rel_label):
                 if get_bounding_box_size(relationship) > THRESHOLD_MIN_BB_SIZE:
                     # Make sure the bounding boxes are not actually the same object
                     if not high_bounding_box_overlap(
-                        relationship["bounding_box"], relationship_target["bounding_box"]
+                        relationship[BOUNDING_BOX], relationship_target[BOUNDING_BOX]
                     ):
                         # Make sure the size difference to the target object is not too big
                         size_target = get_bounding_box_size(relationship_target)
@@ -209,37 +208,6 @@ def find_subj_with_other_rel(sample, subject, relationship_target, rel_label):
                         ):
                             rels.append(relationship)
     return rels
-
-
-def get_duplicate_sample(sample, eval_set, rel_label):
-    for existing_sample in eval_set:
-        if (
-            existing_sample["img_example"] == sample["img_example"]
-            and existing_sample["img_counterexample"] == sample["img_counterexample"]
-        ) or (
-            existing_sample["img_example"] == sample["img_counterexample"]
-            and existing_sample["img_counterexample"] == sample["img_example"]
-        ):
-            # For spatial relationships we require also the object to be the same
-            if sample["relationship_target"][rel_label] in RELATIONSHIPS_SPATIAL:
-                if (
-                    existing_sample["relationship_target"][SUBJECT]
-                    == sample["relationship_target"][SUBJECT]
-                    and existing_sample["relationship_target"][rel_label]
-                    == sample["relationship_target"][rel_label]
-                    and existing_sample["relationship_target"][OBJECT]
-                    == sample["relationship_target"][OBJECT]
-                ):
-                    return existing_sample
-            else:
-                if (
-                    existing_sample["relationship_target"][SUBJECT]
-                    == sample["relationship_target"][SUBJECT]
-                    and existing_sample["relationship_target"][rel_label]
-                    == sample["relationship_target"][rel_label]
-                ):
-                    return existing_sample
-    return None
 
 
 def get_counterexample_images_subj(
@@ -275,39 +243,31 @@ def get_counterexample_images_attr(
     relationship_target,
     rel_label,
 ):
-    # check that counterexample relation is in image
-    is_counterexample_relation = F(SUBJECT).is_in(
-        SYNONYMS[relationship_target[SUBJECT]]
-    ) & F(rel_label).is_in(SYNONYMS[distractor_attribute])
-    is_big_enough = F(BOUNDING_BOX)[2] * F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BB_SIZE
-    # For spatial relationships we require also the object to be the same
-    if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
-        is_counterexample_relation = (
-            F(SUBJECT).is_in(SYNONYMS[relationship_target[SUBJECT]])
-            & F(rel_label).is_in(SYNONYMS[distractor_attribute])
-            & F(OBJECT).is_in(SYNONYMS[relationship_target[OBJECT]])
-        )
+    matching_images_counterexample = []
+    for i in matching_images:
+        contains_counterexample = False
+        contains_example = False
+        for r in i["relationships"]:
+            # check that counterexample relation is in image
+            if r[SUBJECT] in SYNONYMS[relationship_target[SUBJECT]] and r[rel_label] in SYNONYMS[distractor_attribute]:
+                if r[BOUNDING_BOX][2] * r[BOUNDING_BOX][3] > THRESHOLD_MIN_BB_SIZE:
+                    # For spatial relationships we require also the object to be the same
+                    if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
+                        if r[OBJECT] in SYNONYMS[relationship_target[OBJECT]]:
+                            contains_example = True
+                    else:
+                        contains_counterexample = True
+            # check that target IS NOT in same image:
+            if r[SUBJECT] in SYNONYMS[relationship_target[SUBJECT]] and r[rel_label] in SYNONYMS[
+                relationship_target[rel_label]]:
+                if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
+                    if r[OBJECT] in SYNONYMS[relationship_target[OBJECT]]:
+                        contains_example = True
+                else:
+                    contains_example = True
+        if contains_counterexample and not contains_example:
+            matching_images_counterexample.append(i)
 
-    # check that target IS NOT in same image:
-    is_example_relation = F(SUBJECT).is_in(SYNONYMS[relationship_target[SUBJECT]]) & F(
-        rel_label
-    ).is_in(SYNONYMS[relationship_target[rel_label]])
-    if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
-        is_example_relation = (
-            F(SUBJECT).is_in(SYNONYMS[relationship_target[SUBJECT]])
-            & F(rel_label).is_in(SYNONYMS[relationship_target[rel_label]])
-            & F(OBJECT).is_in(SYNONYMS[relationship_target[OBJECT]])
-        )
-
-    matching_images_counterexample = matching_images.match(
-        (
-            F(IMAGE_RELATIONSHIPS)
-            .filter(is_counterexample_relation & is_big_enough)
-            .length()
-            > 0
-        )
-        & (F(IMAGE_RELATIONSHIPS).filter(is_example_relation).length() == 0)
-    )
     return matching_images_counterexample
 
 
@@ -484,30 +444,31 @@ def generate_eval_sets_from_subject_tuples(
         with Pool(processes=8) as pool:
             results = pool.starmap(process_sample_subj, tqdm(process_args, total=len(process_args)))
 
-        print("Dropping duplicates...")
         # build index for faster dropping of duplicates
         all_results = []
         for res_process in results:
             for sample in res_process:
                 all_results.append((get_index_key(sample), sample))
+        if len(all_results) > 0:
+            print("Dropping duplicates...")
 
-        eval_set = {}
-        for key, sample in tqdm(all_results):
-            # Replace current sample if new one has bigger objects
-            if key in eval_set.keys():
-                duplicate_sample = eval_set[key]
-                if get_sum_of_bounding_box_sizes(
-                    sample
-                ) > get_sum_of_bounding_box_sizes(
-                    duplicate_sample
-                ):
+            eval_set = {}
+            for key, sample in tqdm(all_results):
+                # Replace current sample if new one has bigger objects
+                if key in eval_set.keys():
+                    duplicate_sample = eval_set[key]
+                    if get_sum_of_bounding_box_sizes(
+                            sample
+                    ) > get_sum_of_bounding_box_sizes(
+                        duplicate_sample
+                    ):
+                        eval_set[key] = sample
+                else:
                     eval_set[key] = sample
-            else:
-                eval_set[key] = sample
-                # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
 
-        eval_set = list(eval_set.values())
-        if len(eval_set) > 0:
+            eval_set = list(eval_set.values())
+
             eval_sets[target_tuple] = eval_set
             print("saving intermediate results..")
             pickle.dump(eval_sets, open(file_name, "wb"))
@@ -524,15 +485,13 @@ def process_sample_rel_or_obj(
     matching_images,
     target_attribute,
     distractor_attribute,
-    counterexample_cache,
-    eval_set,
     check_sharpness,
-    thread_lock_eval_set,
-    thread_lock_counterexample_cache,
 ):
+    counterexample_cache = {}
+    samples = []
     candidate_relationships = [
         rel
-        for rel in example.relationships.detections
+        for rel in example["relationships"]
         if rel[rel_label] in SYNONYMS[target_attribute]
         and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
         and not is_subj_rel_in_image(
@@ -569,9 +528,7 @@ def process_sample_rel_or_obj(
                         relationship_target,
                         rel_label,
                     )
-                    thread_lock_counterexample_cache.acquire()
                     counterexample_cache[counterexample_key] = counterx_images
-                    thread_lock_counterexample_cache.release()
 
                 matching_images_counterexample = counterexample_cache[
                     counterexample_key
@@ -581,7 +538,7 @@ def process_sample_rel_or_obj(
 
                     counterexample_relationships = [
                         rel
-                        for rel in counterexample.relationships.detections
+                        for rel in counterexample["relationships"]
                         if rel[SUBJECT] in SYNONYMS[target_subject]
                         and rel[rel_label] in SYNONYMS[distractor_attribute]
                         and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
@@ -623,35 +580,16 @@ def process_sample_rel_or_obj(
                                     ):
 
                                         sample = {
-                                            "img_example": example.filepath,
-                                            "img_counterexample": counterexample.filepath,
+                                            "img_example": example["filepath"],
+                                            "img_counterexample": counterexample["filepath"],
                                             "relationship_target": relationship_target,
                                             "relationship_visual_distractor": rel_visual_distractor,
                                             "counterexample_relationship_target": counterex_rel_target,
                                             "counterexample_relationship_visual_distractor": counterex_rel_visual_distractor,
                                             "rel_label": rel_label,
                                         }
-                                        duplicate_sample = get_duplicate_sample(
-                                            sample, eval_set, rel_label
-                                        )
-
-                                        # Replace current sample if new one has bigger objects
-                                        if duplicate_sample is not None:
-                                            if get_sum_of_bounding_box_sizes(
-                                                sample
-                                            ) > get_sum_of_bounding_box_sizes(
-                                                duplicate_sample
-                                            ):
-                                                thread_lock_eval_set.acquire()
-                                                eval_set.remove(duplicate_sample)
-                                                eval_set.append(sample)
-                                                thread_lock_eval_set.release()
-                                        else:
-                                            # Add tuple of example and counter-example
-                                            thread_lock_eval_set.acquire()
-                                            eval_set.append(sample)
-                                            thread_lock_eval_set.release()
-                                            # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+                                        samples.append(sample)
+    return samples
 
 
 def generate_eval_sets_from_rel_or_object_tuples(
@@ -670,8 +608,6 @@ def generate_eval_sets_from_rel_or_object_tuples(
     for target_tuple in tuples:
         print("Looking for: ", target_tuple)
 
-        eval_set = []
-        counterexample_cache = {}
         target_attribute, distractor_attribute = target_tuple
 
         # Compute matching images
@@ -686,33 +622,42 @@ def generate_eval_sets_from_rel_or_object_tuples(
             )
         )
 
-        thread_lock_eval_set = threading.Lock()
-        thread_lock_counterexample_cache = threading.Lock()
-
-        threads = []
+        process_args = []
+        matching_images = [sample_to_dict(s) for s in matching_images]
         for example in tqdm(matching_images):
-            t = threading.Thread(
-                target=process_sample_rel_or_obj,
-                args=(
-                    example,
+            process_args.append((example,
                     rel_label,
                     matching_images,
                     target_attribute,
                     distractor_attribute,
-                    counterexample_cache,
-                    eval_set,
-                    check_sharpness,
-                    thread_lock_eval_set,
-                    thread_lock_counterexample_cache,
-                ),
-            )
-            t.start()
-            threads.append(t)
+                    check_sharpness,))
 
-        for t in tqdm(threads):
-            t.join()
+        with Pool(processes=8) as pool:
+            results = pool.starmap(process_sample_rel_or_obj, tqdm(process_args, total=len(process_args)))
 
-        if len(eval_set) > 0:
+        # build index for faster dropping of duplicates
+        all_results = []
+        for res_process in results:
+            for sample in res_process:
+                all_results.append((get_index_key(sample), sample))
+
+        if len(all_results) > 0:
+            print("Dropping duplicates...")
+            eval_set = {}
+            for key, sample in tqdm(all_results):
+                # Replace current sample if new one has bigger objects
+                if key in eval_set.keys():
+                    duplicate_sample = eval_set[key]
+                    if get_sum_of_bounding_box_sizes(
+                            sample
+                    ) > get_sum_of_bounding_box_sizes(
+                        duplicate_sample
+                    ):
+                        eval_set[key] = sample
+                else:
+                    eval_set[key] = sample
+                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+
             eval_sets[target_tuple] = eval_set
             print("saving intermediate results..")
             pickle.dump(eval_sets, open(file_name, "wb"))
