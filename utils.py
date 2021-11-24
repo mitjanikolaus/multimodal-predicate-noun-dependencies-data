@@ -614,3 +614,21 @@ def get_target_and_distractor_sentence(sample):
     )
 
     return text_target, text_distractor
+
+
+def relationship_to_dict(relationship):
+    return {
+        "id": relationship.id,
+        SUBJECT: relationship[SUBJECT],
+        REL: relationship[REL],
+        OBJECT: relationship[OBJECT],
+        "bounding_box": relationship.bounding_box
+    }
+
+
+def sample_to_dict(example):
+    return {
+        "id": example["id"],
+        "filepath": example["filepath"],
+        "relationships": [relationship_to_dict(rel) for rel in example["relationships"].detections]
+    }
