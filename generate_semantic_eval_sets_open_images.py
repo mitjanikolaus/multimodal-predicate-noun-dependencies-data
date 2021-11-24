@@ -432,6 +432,16 @@ def process_sample_subj(
     return samples
 
 
+def get_index_key(sample):
+    # use alphabetical order of images because we also want to catch cases of flipped example/counterexample:
+    images_key = min(sample["img_example"], sample["img_counterexample"]) + "_" + max(sample["img_example"], sample["img_counterexample"])
+    if sample["relationship_target"][REL] in RELATIONSHIPS_SPATIAL and sample["rel_label"] == REL:
+        return images_key + "_" + sample["relationship_target"][
+            SUBJECT] + "_" + sample["relationship_target"][REL] + "_" + sample["relationship_target"][OBJECT]
+    else:
+        return images_key + "_" + sample["relationship_target"][SUBJECT] + "_" + sample["relationship_target"][sample["rel_label"]]
+
+
 def generate_eval_sets_from_subject_tuples(
     subject_tuples, split, max_samples, file_name, check_sharpness
 ):
@@ -448,7 +458,6 @@ def generate_eval_sets_from_subject_tuples(
     for target_tuple in subject_tuples:
         print("Looking for: ", target_tuple)
 
-        eval_set = []
         target_subject, distractor_subject = target_tuple
 
         # Compute matching images
@@ -475,35 +484,29 @@ def generate_eval_sets_from_subject_tuples(
         with Pool(processes=8) as pool:
             results = pool.starmap(process_sample_subj, tqdm(process_args, total=len(process_args)))
 
-        if len(eval_set) > 0:
-            eval_sets[target_tuple] = eval_set
-            print("saving intermediate results..")
-            pickle.dump(eval_sets, open(file_name, "wb"))
-            print(
-                f"\nFound {len(eval_sets[target_tuple])} examples for {target_tuple}.\n"
-            )
-
         print("Dropping duplicates...")
-        for res_process in tqdm(results):
+        # build index for faster dropping of duplicates
+        all_results = []
+        for res_process in results:
             for sample in res_process:
-                duplicate_sample = get_duplicate_sample(
-                    sample, eval_set, sample["rel_label"]
-                )
+                all_results.append((get_index_key(sample), sample))
 
-                # Replace current sample if new one has bigger objects
-                if duplicate_sample is not None:
-                    if get_sum_of_bounding_box_sizes(
-                        sample
-                    ) > get_sum_of_bounding_box_sizes(
-                        duplicate_sample
-                    ):
-                        eval_set.remove(duplicate_sample)
-                        eval_set.append(sample)
-                else:
-                    # Add example and counter-example
-                    eval_set.append(sample)
-                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+        eval_set = {}
+        for key, sample in tqdm(all_results):
+            # Replace current sample if new one has bigger objects
+            if key in eval_set.keys():
+                duplicate_sample = eval_set[key]
+                if get_sum_of_bounding_box_sizes(
+                    sample
+                ) > get_sum_of_bounding_box_sizes(
+                    duplicate_sample
+                ):
+                    eval_set[key] = sample
+            else:
+                eval_set[key] = sample
+                # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
 
+        eval_set = list(eval_set.values())
         if len(eval_set) > 0:
             eval_sets[target_tuple] = eval_set
             print("saving intermediate results..")
