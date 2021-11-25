@@ -17,7 +17,7 @@ REL = "label"
 OBJECT = "Label2"
 
 IMAGE_RELATIONSHIPS_FIFTYONE = "relationships.detections"
-RELATIONSHIPS = "relationships"
+IMAGE_RELATIONSHIPS = "relationships"
 BOUNDING_BOX = "bounding_box"
 
 
