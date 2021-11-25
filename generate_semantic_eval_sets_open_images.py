@@ -19,8 +19,8 @@ from utils import (
     RELATIONSHIPS_TUPLES,
     RELATIONSHIPS_SPATIAL,
     BOUNDING_BOX,
-    IMAGE_RELATIONSHIPS,
-    high_bounding_box_overlap, sample_to_dict,
+    IMAGE_RELATIONSHIPS_FIFTYONE,
+    high_bounding_box_overlap, sample_to_dict, RELATIONSHIPS,
 )
 
 
@@ -112,7 +112,7 @@ def relationships_are_sharp(sample, rels):
 
 
 def is_subj_rel_in_image(sample, subject, rel_value, rel_label):
-    for rel in sample["relationships"]:
+    for rel in sample[RELATIONSHIPS]:
         if (
             rel[SUBJECT] in SYNONYMS[subject]
             and rel[rel_label] in SYNONYMS[rel_value]
@@ -124,8 +124,8 @@ def is_subj_rel_in_image(sample, subject, rel_value, rel_label):
 
 def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label):
     rels = []
-    if sample["relationships"]:
-        for relationship in sample["relationships"]:
+    if sample[RELATIONSHIPS]:
+        for relationship in sample[RELATIONSHIPS]:
             if relationship[SUBJECT] in ["Boy", "Man"] and relationship_target[
                 SUBJECT
             ] in [
@@ -176,7 +176,7 @@ def find_other_subj_with_attr(sample, relationship_target, rel_value, rel_label)
 
 def find_subj_with_other_rel(sample, subject, relationship_target, rel_label):
     rels = []
-    for relationship in sample["relationships"]:
+    for relationship in sample[RELATIONSHIPS]:
         # Check for correct labels
         if (
             relationship[SUBJECT] in SYNONYMS[subject]
@@ -217,7 +217,7 @@ def get_counterexample_images_subj(
     for i in matching_images:
         contains_counterexample = False
         contains_example = False
-        for r in i["relationships"]:
+        for r in i[RELATIONSHIPS]:
             if r[SUBJECT] in SYNONYMS[distractor_subject] and r[rel_label] in SYNONYMS[relationship_target[rel_label]]:
                 if r[BOUNDING_BOX][2] * r[BOUNDING_BOX][3] > THRESHOLD_MIN_BB_SIZE:
                     if relationship_target[rel_label] in RELATIONSHIPS_SPATIAL:
@@ -247,7 +247,7 @@ def get_counterexample_images_attr(
     for i in matching_images:
         contains_counterexample = False
         contains_example = False
-        for r in i["relationships"]:
+        for r in i[RELATIONSHIPS]:
             # check that counterexample relation is in image
             if r[SUBJECT] in SYNONYMS[relationship_target[SUBJECT]] and r[rel_label] in SYNONYMS[distractor_attribute]:
                 if r[BOUNDING_BOX][2] * r[BOUNDING_BOX][3] > THRESHOLD_MIN_BB_SIZE:
@@ -292,7 +292,7 @@ def process_sample_subj(
     for rel_label in [REL, OBJECT]:
         candidate_relationships = [
             rel
-            for rel in example["relationships"]
+            for rel in example[RELATIONSHIPS]
             if rel[SUBJECT] in SYNONYMS[target_subject]
             and rel[rel_label] in VALID_NAMES[rel_label]
             and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
@@ -336,7 +336,7 @@ def process_sample_subj(
 
                         counterexample_relationships = [
                             rel
-                            for rel in counterexample["relationships"]
+                            for rel in counterexample[RELATIONSHIPS]
                             if rel[SUBJECT] in SYNONYMS[distractor_subject]
                             and rel[rel_label]
                             in SYNONYMS[relationship_target[rel_label]]
@@ -409,7 +409,7 @@ def generate_eval_sets_from_subject_tuples(
 
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
-        label_types=["relationships"],
+        label_types=[RELATIONSHIPS],
         max_samples=max_samples,
         split=split,
         dataset_name=f"open-images-v6-{split}-{max_samples}",
@@ -425,9 +425,9 @@ def generate_eval_sets_from_subject_tuples(
         is_distractor = F(SUBJECT).is_in(SYNONYMS[distractor_subject])
         is_big_enough = F(BOUNDING_BOX)[2] * F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BB_SIZE
         matching_images = dataset.match(
-            (F(IMAGE_RELATIONSHIPS).filter(is_target & is_big_enough).length() > 0)
+            (F(IMAGE_RELATIONSHIPS_FIFTYONE).filter(is_target & is_big_enough).length() > 0)
             & (
-                F(IMAGE_RELATIONSHIPS).filter(is_distractor & is_big_enough).length()
+                F(IMAGE_RELATIONSHIPS_FIFTYONE).filter(is_distractor & is_big_enough).length()
                 > 0
             )
         )
@@ -491,7 +491,7 @@ def process_sample_rel_or_obj(
     samples = []
     candidate_relationships = [
         rel
-        for rel in example["relationships"]
+        for rel in example[RELATIONSHIPS]
         if rel[rel_label] in SYNONYMS[target_attribute]
         and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
         and not is_subj_rel_in_image(
@@ -538,7 +538,7 @@ def process_sample_rel_or_obj(
 
                     counterexample_relationships = [
                         rel
-                        for rel in counterexample["relationships"]
+                        for rel in counterexample[RELATIONSHIPS]
                         if rel[SUBJECT] in SYNONYMS[target_subject]
                         and rel[rel_label] in SYNONYMS[distractor_attribute]
                         and get_bounding_box_size(rel) > THRESHOLD_MIN_BB_SIZE
@@ -599,7 +599,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
 
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
-        label_types=["relationships"],
+        label_types=[RELATIONSHIPS],
         max_samples=max_samples,
         split=split,
         dataset_name=f"open-images-v6-{split}-{max_samples}",
@@ -615,9 +615,9 @@ def generate_eval_sets_from_rel_or_object_tuples(
         is_distractor = F(rel_label).is_in(SYNONYMS[distractor_attribute])
         is_big_enough = F(BOUNDING_BOX)[2] * F(BOUNDING_BOX)[3] > THRESHOLD_MIN_BB_SIZE
         matching_images = dataset.match(
-            (F(IMAGE_RELATIONSHIPS).filter(is_target & is_big_enough).length() > 0)
+            (F(IMAGE_RELATIONSHIPS_FIFTYONE).filter(is_target & is_big_enough).length() > 0)
             & (
-                F(IMAGE_RELATIONSHIPS).filter(is_distractor & is_big_enough).length()
+                F(IMAGE_RELATIONSHIPS_FIFTYONE).filter(is_distractor & is_big_enough).length()
                 > 0
             )
         )
@@ -657,6 +657,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
                 else:
                     eval_set[key] = sample
                     # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+            eval_set = list(eval_set.values())
 
             eval_sets[target_tuple] = eval_set
             print("saving intermediate results..")

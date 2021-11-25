@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
     QShortcut,
 )
 
-from utils import OBJECTS_VERBS, SYNONYMS, SUBJECT, OBJECT, get_target_and_distractor_sentence
+from utils import SYNONYMS, SUBJECT, OBJECT, get_target_and_distractor_sentence, BOUNDING_BOX, REL, get_local_image_path
 
 
 class EvalSetFilter(QWidget):
@@ -66,8 +66,8 @@ class EvalSetFilter(QWidget):
 
         self.pic_example = QLabel(self)
         grid.addWidget(self.pic_example, 1, 0)
-        self.pic_counter_example = QLabel(self)
-        grid.addWidget(self.pic_counter_example, 1, 1)
+        self.pic_counterexample = QLabel(self)
+        grid.addWidget(self.pic_counterexample, 1, 1)
 
         self.text_example_target = QLabel(self)
         self.text_example_target.setFixedHeight(15)
@@ -96,7 +96,7 @@ class EvalSetFilter(QWidget):
         grid.addWidget(self.text_counterexample_filepath, 4, 1)
 
         self.pic_example.show()
-        self.pic_counter_example.show()
+        self.pic_counterexample.show()
         self.text_example_target.show()
         self.text_example_distractor.show()
         self.text_example_filepath.show()
@@ -152,14 +152,15 @@ class EvalSetFilter(QWidget):
 
         self.text_example_target.setText("Target: " + text_target)
         self.text_example_distractor.setText("Distractor: " + text_distractor)
-        self.text_example_filepath.setText(self.sample["img_example"])
+        img_path_example = get_local_image_path(self.sample["img_example"])
+        self.text_example_filepath.setText(img_path_example)
 
         self.text_counterexample_target.setText("Target: " + text_distractor)
         self.text_counterexample_distractor.setText("Distractor: " + text_target)
-        self.text_counterexample_filepath.setText(self.sample["img_counterexample"])
+        img_path_counterexample = get_local_image_path(self.sample["img_counterexample"])
+        self.text_counterexample_filepath.setText(img_path_counterexample)
 
-        for img in [sample["img_example"], sample["img_counterexample"]]:
-            img_path = os.path.join(fiftyone.config.dataset_zoo_dir, img.split("fiftyone/")[1])
+        for img_path in [img_path_example, img_path_counterexample]:
             pixmap = QtGui.QPixmap(img_path)
             pixmap = pixmap.scaledToWidth(500)
 
@@ -170,7 +171,7 @@ class EvalSetFilter(QWidget):
                 self.sample["relationship_target"],
                 self.sample["relationship_visual_distractor"],
             ]
-            if img == sample["img_counterexample"]:
+            if img_path == img_path_counterexample:
                 relationships = [
                     self.sample["counterexample_relationship_target"],
                     self.sample["counterexample_relationship_visual_distractor"],
@@ -179,7 +180,7 @@ class EvalSetFilter(QWidget):
             for relationship, pen in zip(
                 relationships, [penRectangleGreen, penRectangleRed]
             ):
-                bb = relationship.bounding_box
+                bb = relationship[BOUNDING_BOX]
 
                 # draw rectangle on painter
                 self.painterInstance.setPen(pen)
@@ -190,7 +191,7 @@ class EvalSetFilter(QWidget):
                     round(bb[3] * pixmap.height()),
                 )
                 label = (
-                    f"{relationship[SUBJECT]} {relationship.label} {relationship[OBJECT]}"
+                    f"{relationship[SUBJECT]} {relationship[REL]} {relationship[OBJECT]}"
                 )
                 self.painterInstance.setPen(penWhite)
                 self.painterInstance.drawText(
@@ -199,8 +200,8 @@ class EvalSetFilter(QWidget):
 
             self.painterInstance.end()
 
-            if img == sample["img_counterexample"]:
-                self.pic_counter_example.setPixmap(pixmap)
+            if img_path == img_path_counterexample:
+                self.pic_counterexample.setPixmap(pixmap)
             else:
                 self.pic_example.setPixmap(pixmap)
 

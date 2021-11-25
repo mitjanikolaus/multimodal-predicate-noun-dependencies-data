@@ -16,7 +16,8 @@ SUBJECT = "Label1"
 REL = "label"
 OBJECT = "Label2"
 
-IMAGE_RELATIONSHIPS = "relationships.detections"
+IMAGE_RELATIONSHIPS_FIFTYONE = "relationships.detections"
+RELATIONSHIPS = "relationships"
 BOUNDING_BOX = "bounding_box"
 
 
@@ -317,7 +318,7 @@ def log_time(message, reference_time=None):
 
 
 def get_local_image_path(img_path):
-    return os.path.join(fiftyone.config.dataset_zoo_dir, img_path.split("fiftyone/")[1])
+    return os.path.join(*[fiftyone.config.dataset_zoo_dir, "open-images-v6", img_path.split("open-images-v6/")[1]])
 
 
 # Threshold for overlap of 2 bounding boxes
@@ -604,12 +605,12 @@ def get_target_and_distractor_sentence(sample):
     # TODO: consider rel_label?
     text_target = generate_sentence_from_triplet(
         SYNONYMS[sample["relationship_target"][SUBJECT]][0],
-        sample["relationship_target"].label,
+        sample["relationship_target"][REL],
         SYNONYMS[sample["relationship_target"][OBJECT]][0],
     )
     text_distractor = generate_sentence_from_triplet(
         SYNONYMS[sample["counterexample_relationship_target"][SUBJECT]][0],
-        sample["counterexample_relationship_target"].label,
+        sample["counterexample_relationship_target"][REL],
         SYNONYMS[sample["counterexample_relationship_target"][OBJECT]][0],
     )
 

@@ -18,13 +18,13 @@ from generate_semantic_eval_sets_open_images import (
 )
 
 # Maximum difference in bounding box sharpness for target and visual distractor
-from utils import SUBJECT, show_image
+from utils import SUBJECT, show_image, BOUNDING_BOX
 
 THRESHOLD_BB_SHARPNESS_DIFFERENCE = 4000
 
 
 def is_same_bounding_box(rel1, rel2, precision=2):
-    for val_1, val_2 in zip(rel1.bounding_box, rel2.bounding_box):
+    for val_1, val_2 in zip(rel1[BOUNDING_BOX], rel2[BOUNDING_BOX]):
         if round(round(val_1, precision) != round(val_2, precision)):
             return False
     return True
@@ -94,9 +94,9 @@ def eval_set_stats(args):
                     else:
                         img_data = PIL_Image.open(img_path)
                         sharpness_diff = abs(
-                            get_sharpness_of_bounding_box(img_data, rel_target.bounding_box)
+                            get_sharpness_of_bounding_box(img_data, rel_target[BOUNDING_BOX])
                             - get_sharpness_of_bounding_box(
-                                img_data, rel_distractor.bounding_box
+                                img_data, rel_distractor[BOUNDING_BOX]
                             )
                         )
 
