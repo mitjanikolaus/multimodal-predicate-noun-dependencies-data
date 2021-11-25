@@ -101,7 +101,7 @@ def get_sharpness_quotient_of_bounding_box(img_data, bb):
 
 
 def relationships_are_sharp(sample, rels):
-    img_data = PIL_Image.open(sample.filepath)
+    img_data = PIL_Image.open(sample["filepath"])
     for relationship in rels:
         sharpness_quotient = get_sharpness_quotient_of_bounding_box(
             img_data, relationship[BOUNDING_BOX]
@@ -465,7 +465,7 @@ def generate_eval_sets_from_subject_tuples(
                         eval_set[key] = sample
                 else:
                     eval_set[key] = sample
-                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+                    # show_image_pair(example["filepath"], counterexample["filepath"], [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
 
             eval_set = list(eval_set.values())
 
@@ -656,7 +656,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
                         eval_set[key] = sample
                 else:
                     eval_set[key] = sample
-                    # show_image_pair(example.filepath, counterexample.filepath, [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+                    # show_image_pair(example["filepath"], counterexample["filepath"], [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
             eval_set = list(eval_set.values())
 
             eval_sets[target_tuple] = eval_set
