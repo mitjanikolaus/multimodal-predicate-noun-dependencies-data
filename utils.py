@@ -211,7 +211,7 @@ SUBJECTS_OTHERS_TUPLES = [
     ("Girl", "Boy"),
 ]
 
-SUBJECT_TUPLES = SUBJECTS_GENERAL_TUPLES + SUBJECTS_OTHERS_TUPLES
+SUBJECT_TUPLES = SUBJECTS_OTHERS_TUPLES + SUBJECTS_GENERAL_TUPLES
 
 # Relationships (.label)
 RELATIONSHIPS_SPATIAL = ["at", "contain", "holds", "on", "hang", "inside_of", "under"]
