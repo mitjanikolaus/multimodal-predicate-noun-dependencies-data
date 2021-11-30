@@ -296,6 +296,7 @@ def process_sample_subj(
     target_subject,
     distractor_subject,
     check_sharpness,
+    process_id,
 ):
     counterexample_cache = {}
     samples = []
@@ -402,6 +403,7 @@ def process_sample_subj(
                                                 "rel_label": rel_label,
                                             }
                                             samples.append(sample)
+    print(f"Process {process_id} finished.")
     return samples
 
 
@@ -480,8 +482,9 @@ def generate_eval_sets_from_subject_tuples(
                 target_subject,
                 distractor_subject,
                 check_sharpness,
+                process_id
             )
-            for example in matching_images
+            for process_id, example in enumerate(matching_images)
         ]
 
         with Pool(processes=8) as pool:
