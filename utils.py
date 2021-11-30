@@ -633,3 +633,27 @@ def sample_to_dict(example):
         "filepath": example["filepath"],
         "relationships": [relationship_to_dict(rel) for rel in example["relationships"].detections]
     }
+
+def convert_eval_sets_to_one_sample_per_row(eval_sets):
+    new_df = []
+    for key, eval_set in eval_sets.items():
+        for sample in eval_set:
+            example = {
+                "target_word": key[0],
+                "distractor_word": key[1],
+                "image": sample["img_example"],
+                "relationship_target": sample["relationship_target"],
+                "relationship_visual_distractor": sample["relationship_visual_distractor"],
+                "rel_label": sample["rel_label"]
+            }
+            new_df.append(example)
+            counterexample = {
+                "target_word": key[1],
+                "distractor_word": key[0],
+                "image": sample["img_counterexample"],
+                "relationship_target": sample["counterexample_relationship_target"],
+                "relationship_visual_distractor": sample["counterexample_relationship_visual_distractor"],
+                "rel_label": sample["rel_label"]
+            }
+            new_df.append(counterexample)
+    return pd.DataFrame(new_df)
