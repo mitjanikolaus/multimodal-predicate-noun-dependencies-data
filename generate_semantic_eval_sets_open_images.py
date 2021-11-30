@@ -25,6 +25,7 @@ from utils import (
     IMAGE_RELATIONSHIPS,
 )
 
+MAX_IMAGES = 10000
 
 # Bounding boxes of objects should be at least 25% of image in width and height
 THRESHOLD_MIN_BB_SIZE = 0.25 * 0.25
@@ -473,7 +474,7 @@ def generate_eval_sets_from_subject_tuples(
                 > 0
             )
         )
-
+        matching_images = matching_images[:MAX_IMAGES]
         matching_images = [sample_to_dict(s) for s in matching_images]
         process_args = [
             (
@@ -491,6 +492,8 @@ def generate_eval_sets_from_subject_tuples(
             results = pool.starmap(
                 process_sample_subj, tqdm(process_args, total=len(process_args))
             )
+            pool.close()
+            pool.join()
 
         # build index for faster dropping of duplicates
         all_results = []
