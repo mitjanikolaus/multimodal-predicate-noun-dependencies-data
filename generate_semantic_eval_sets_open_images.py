@@ -493,9 +493,9 @@ def generate_eval_sets_from_subject_tuples(
         for res_process in tqdm(results):
             for sample in res_process:
                 all_results.append((get_index_key(sample), sample))
+
         if len(all_results) > 0:
             print("Dropping duplicates...")
-
             eval_set = {}
             for key, sample in tqdm(all_results):
                 # Replace current sample if new one has bigger objects
@@ -636,8 +636,6 @@ def process_sample_rel_or_obj(
 def generate_eval_sets_from_rel_or_object_tuples(
     tuples, rel_label, split, max_samples, file_name, check_sharpness
 ):
-    eval_sets = {}
-
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
         label_types=[IMAGE_RELATIONSHIPS],
@@ -670,6 +668,7 @@ def generate_eval_sets_from_rel_or_object_tuples(
             )
         )
 
+        matching_images = matching_images[:MAX_IMAGES]
         matching_images = [sample_to_dict(s) for s in matching_images]
         process_args = [
             (
@@ -708,16 +707,14 @@ def generate_eval_sets_from_rel_or_object_tuples(
                 else:
                     eval_set[key] = sample
                     # show_image_pair(example["filepath"], counterexample["filepath"], [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
+
             eval_set = list(eval_set.values())
 
-            eval_sets[target_tuple] = eval_set
             print("saving intermediate results..")
-            pickle.dump(eval_sets, open(file_name, "wb"))
+            pickle.dump(eval_set, open(file_name.replace(".p", f"-{target_tuple[0]}-{target_tuple[1]}.p"), "wb"))
             print(
-                f"Found {len(eval_sets[target_tuple])} examples for {target_tuple}.\n\n"
+                f"Found {len(eval_set)} examples for {target_tuple}.\n\n"
             )
-
-    return eval_sets
 
 
 def parse_args():
@@ -761,7 +758,7 @@ if __name__ == "__main__":
 
     elif args.eval_set == "object_tuples":
         file_name = f"results/object-{args.split}-{args.max_samples}.p"
-        eval_sets = generate_eval_sets_from_rel_or_object_tuples(
+        generate_eval_sets_from_rel_or_object_tuples(
             OBJECTS_TUPLES,
             OBJECT,
             args.split,
@@ -769,11 +766,10 @@ if __name__ == "__main__":
             file_name,
             args.check_sharpness,
         )
-        pickle.dump(eval_sets, open(file_name, "wb"))
 
     elif args.eval_set == "relationship_tuples":
         file_name = f"results/rel-{args.split}-{args.max_samples}.p"
-        eval_sets = generate_eval_sets_from_rel_or_object_tuples(
+        generate_eval_sets_from_rel_or_object_tuples(
             RELATIONSHIPS_TUPLES,
             REL,
             args.split,
@@ -781,4 +777,3 @@ if __name__ == "__main__":
             file_name,
             args.check_sharpness,
         )
-        pickle.dump(eval_sets, open(file_name, "wb"))
