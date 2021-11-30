@@ -25,7 +25,7 @@ from utils import (
     IMAGE_RELATIONSHIPS,
 )
 
-MAX_IMAGES = 10000
+MAX_IMAGES = 25000
 
 # Bounding boxes of objects should be at least 25% of image in width and height
 THRESHOLD_MIN_BB_SIZE = 0.25 * 0.25
@@ -297,7 +297,6 @@ def process_sample_subj(
     target_subject,
     distractor_subject,
     check_sharpness,
-    process_id,
 ):
     counterexample_cache = {}
     samples = []
@@ -404,7 +403,6 @@ def process_sample_subj(
                                                 "rel_label": rel_label,
                                             }
                                             samples.append(sample)
-    print(f"Process {process_id} finished.")
     return samples
 
 
@@ -441,8 +439,6 @@ def get_index_key(sample):
 def generate_eval_sets_from_subject_tuples(
     subject_tuples, split, max_samples, file_name, check_sharpness
 ):
-    eval_sets = {}
-
     dataset = foz.load_zoo_dataset(
         "open-images-v6",
         label_types=[IMAGE_RELATIONSHIPS],
@@ -483,17 +479,14 @@ def generate_eval_sets_from_subject_tuples(
                 target_subject,
                 distractor_subject,
                 check_sharpness,
-                process_id
             )
-            for process_id, example in enumerate(matching_images)
+            for example in matching_images
         ]
 
         with Pool(processes=8) as pool:
             results = pool.starmap(
                 process_sample_subj, tqdm(process_args, total=len(process_args))
             )
-            pool.close()
-            pool.join()
 
         # build index for faster dropping of duplicates
         all_results = []
@@ -518,14 +511,11 @@ def generate_eval_sets_from_subject_tuples(
 
             eval_set = list(eval_set.values())
 
-            eval_sets[target_tuple] = eval_set
             print("saving intermediate results..")
-            pickle.dump(eval_sets, open(file_name, "wb"))
+            pickle.dump(eval_set, open(file_name.replace(".p", f"-{target_tuple[0]}-{target_tuple[1]}.p"), "wb"))
             print(
-                f"\nFound {len(eval_sets[target_tuple])} examples for {target_tuple}.\n"
+                f"\nFound {len(eval_set)} examples for {target_tuple}.\n"
             )
-
-    return eval_sets
 
 
 def process_sample_rel_or_obj(
@@ -761,14 +751,13 @@ if __name__ == "__main__":
 
     if args.eval_set == "subject_tuples":
         file_name = f"results/subject-{args.split}-{args.max_samples}.p"
-        eval_sets_based_on_subjects = generate_eval_sets_from_subject_tuples(
+        generate_eval_sets_from_subject_tuples(
             SUBJECT_TUPLES,
             args.split,
             args.max_samples,
             file_name,
             args.check_sharpness,
         )
-        pickle.dump(eval_sets_based_on_subjects, open(file_name, "wb"))
 
     elif args.eval_set == "object_tuples":
         file_name = f"results/object-{args.split}-{args.max_samples}.p"
