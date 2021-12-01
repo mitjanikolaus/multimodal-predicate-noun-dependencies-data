@@ -24,27 +24,45 @@ class EvalSetFilter(QWidget):
     def __init__(self, args):
         super().__init__()
 
-        self.input_file = args.input_file
-        print("Processing: ", self.input_file)
-        self.eval_sets = pickle.load(open(self.input_file, "rb"))
+        self.input_file_prefix = args.input_file_prefix
+        dir = os.path.dirname(self.input_file_prefix)
+        prefix = os.path.basename(self.input_file_prefix)
+
+        prefixed = [filename for filename in os.listdir(dir) if filename.startswith(prefix)]
+
+        self.eval_sets = {}
+        print("Loading files: ")
+        for file_name in prefixed:
+            print(file_name)
+            key = (file_name.split("-")[-2], file_name.split("-")[-1].split(".p")[0])
+            self.eval_sets[key] = pickle.load(open(os.path.join(dir, file_name), "rb"))
+
         for key, values in self.eval_sets.items():
             if len(values) > 0:
                 print(f"{key}: {len(values)})")
-
-        self.eval_sets_rejected_examples = {key: [] for key in self.eval_sets.keys()}
-        self.eval_sets_rejected_counterexamples = {
-            key: [] for key in self.eval_sets.keys()
-        }
 
         if args.continue_from:
             print("Continuing from: ", args.continue_from)
             self.eval_sets_filtered = pickle.load(open(args.continue_from, "rb"))
             self.sample_index = int(args.continue_from.split("sample_")[1].split(".p")[0]) - 1
             self.eval_set_index = int(args.continue_from.split("eval_set_")[1].split("_sample")[0]) - 1
+
+            filename_rejected_examples = args.continue_from.replace("_filtered_", "_rejected_examples_")
+            print(f"Loading rejected examples from {filename_rejected_examples}")
+            self.eval_sets_rejected_examples = pickle.load(open(filename_rejected_examples, "rb"))
+
+            filename_rejected_counterexamples = args.continue_from.replace("_filtered_", "_rejected_counterexamples_")
+            print(f"Loading rejected counterexamples from {filename_rejected_counterexamples}")
+            self.eval_sets_rejected_counterexamples = pickle.load(open(filename_rejected_counterexamples, "rb"))
         else:
             self.eval_sets_filtered = {key: [] for key in self.eval_sets.keys()}
             self.eval_set_index = 0
             self.sample_index = 0
+
+            self.eval_sets_rejected_examples = {key: [] for key in self.eval_sets.keys()}
+            self.eval_sets_rejected_counterexamples = {
+                key: [] for key in self.eval_sets.keys()
+            }
 
         self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
 
@@ -301,12 +319,17 @@ class EvalSetFilter(QWidget):
         self.plot_sample(self.sample)
 
     def save(self):
-        file_name = self.input_file.replace(
-            ".p",
-            f"_filtered_eval_set_{self.eval_set_index+1}_sample_{self.sample_index+1}.p",
-        )
+        file_name = os.path.basename(self.input_file_prefix) + f"_filtered_eval_set_{self.eval_set_index+1}_sample_{self.sample_index+1}.p"
         pickle.dump(
-            self.eval_sets_filtered, open(file_name, "wb",),
+            self.eval_sets_filtered, open(os.path.join("filtered_eval_sets", file_name), "wb",),
+        )
+        file_name = os.path.basename(self.input_file_prefix) + f"_rejected_examples_eval_set_{self.eval_set_index + 1}_sample_{self.sample_index + 1}.p"
+        pickle.dump(
+            self.eval_sets_filtered, open(os.path.join("filtered_eval_sets", file_name), "wb",),
+        )
+        file_name = os.path.basename(self.input_file_prefix) + f"_rejected_counterexamples_eval_set_{self.eval_set_index + 1}_sample_{self.sample_index + 1}.p"
+        pickle.dump(
+            self.eval_sets_filtered, open(os.path.join("filtered_eval_sets", file_name), "wb",),
         )
         summary = ""
         for key, values in self.eval_sets_filtered.items():
@@ -322,7 +345,7 @@ class EvalSetFilter(QWidget):
 def parse_args():
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
-        "--input-file", type=str, required=True,
+        "--input-file-prefix", type=str, required=True,
     )
     argparser.add_argument(
         "--continue-from", type=str, required=False,
