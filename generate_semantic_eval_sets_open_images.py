@@ -25,7 +25,7 @@ from utils import (
     IMAGE_RELATIONSHIPS,
 )
 
-MAX_IMAGES = 25000
+MAX_IMAGES = 10000
 
 # Bounding boxes of objects should be at least 25% of image in width and height
 THRESHOLD_MIN_BB_SIZE = 0.25 * 0.25
