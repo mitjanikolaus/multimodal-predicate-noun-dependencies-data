@@ -31,7 +31,7 @@ MAX_IMAGES = 25000
 THRESHOLD_MIN_BB_SIZE = 0.25 * 0.25
 
 # Maximum difference in bounding box area for target and visual distractor
-THRESHOLD_BB_SIZE_DIFFERENCE = 0.5
+THRESHOLD_BB_SIZE_DIFFERENCE = 0.3
 
 # We allow high difference in bounding box size if the smaller bounding box is big enough (at least 50% in width/height)
 MIN_BOUNDING_BOX_SIZE_IF_HIGH_DIFFERENCE = 0.5 * 0.5
