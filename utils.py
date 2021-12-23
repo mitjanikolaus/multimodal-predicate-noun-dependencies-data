@@ -160,6 +160,8 @@ OBJECTS_OTHERS_TUPLES = get_tuples_no_duplicates(OBJECTS_OTHERS)
 
 OBJECTS_TUPLES = OBJECTS_OTHERS_TUPLES + OBJECTS_TEXTURES_TUPLES
 
+OBJECTS_PLURAL = ["Glasses", "Earrings", "High heels"]
+
 # Nouns (Label1)
 SUBJECTS_FRUITS = [
     "Orange",

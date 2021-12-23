@@ -1,5 +1,11 @@
 # Multimodal Evaluation
 
+## Data
+
+Download conceptual captions training data from
+https://ai.google.com/research/ConceptualCaptions/download
+and save to `data/conceptual_captions/`.
+
 ## Acknowledgements
 
 Image features for Visual BERT using detectron2 (for 1024 dimensional features): https://colab.research.google.com/drive/1bLGxKdldwqnMVA5x4neY7-l_8fKGWQYI
