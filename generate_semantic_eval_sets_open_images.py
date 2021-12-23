@@ -447,6 +447,8 @@ def generate_eval_sets_from_subject_tuples(
         dataset_name=f"open-images-v6-{split}-{max_samples}",
     )
 
+    eval_sets = {}
+
     for target_tuple in subject_tuples:
         print("Looking for: ", target_tuple)
 
@@ -510,9 +512,10 @@ def generate_eval_sets_from_subject_tuples(
                     # show_image_pair(example["filepath"], counterexample["filepath"], [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
 
             eval_set = list(eval_set.values())
+            eval_sets[target_tuple] = eval_set
 
             print("saving intermediate results..")
-            pickle.dump(eval_set, open(file_name.replace(".p", f"-{target_tuple[0]}-{target_tuple[1]}.p"), "wb"))
+            pickle.dump(eval_sets, open(file_name, "wb"))
             print(
                 f"\nFound {len(eval_set)} examples for {target_tuple}.\n"
             )
@@ -644,6 +647,8 @@ def generate_eval_sets_from_rel_or_object_tuples(
         dataset_name=f"open-images-v6-{split}-{max_samples}",
     )
 
+    eval_sets = {}
+
     for target_tuple in tuples:
         print("Looking for: ", target_tuple)
 
@@ -709,9 +714,10 @@ def generate_eval_sets_from_rel_or_object_tuples(
                     # show_image_pair(example["filepath"], counterexample["filepath"], [relationship_target, rel_visual_distractor], [counterex_rel_target, counterex_rel_visual_distractor])
 
             eval_set = list(eval_set.values())
+            eval_sets[target_tuple] = eval_set
 
             print("saving intermediate results..")
-            pickle.dump(eval_set, open(file_name.replace(".p", f"-{target_tuple[0]}-{target_tuple[1]}.p"), "wb"))
+            pickle.dump(eval_sets, open(file_name, "wb"))
             print(
                 f"Found {len(eval_set)} examples for {target_tuple}.\n\n"
             )
