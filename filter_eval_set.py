@@ -43,18 +43,12 @@ class EvalSetFilter(QWidget):
             print(f"Loading rejected examples from {filename_rejected_examples}")
             self.eval_sets_rejected_examples = pickle.load(open(filename_rejected_examples, "rb"))
 
-            filename_rejected_counterexamples = args.continue_from.replace("_filtered_", "_rejected_counterexamples_")
-            print(f"Loading rejected counterexamples from {filename_rejected_counterexamples}")
-            self.eval_sets_rejected_counterexamples = pickle.load(open(filename_rejected_counterexamples, "rb"))
         else:
             self.eval_sets_filtered = {key: [] for key in self.eval_sets.keys()}
             self.eval_set_index = 0
             self.sample_index = 0
 
             self.eval_sets_rejected_examples = {key: [] for key in self.eval_sets.keys()}
-            self.eval_sets_rejected_counterexamples = {
-                key: [] for key in self.eval_sets.keys()
-            }
 
         self.eval_set_key = list(self.eval_sets.keys())[self.eval_set_index]
 
@@ -249,16 +243,8 @@ class EvalSetFilter(QWidget):
 
         for s in self.eval_sets_rejected_examples[self.eval_set_key]:
             if (
-                s["img_example"] == sample["img_example"]
-                or s["img_example"] == sample["img_counterexample"]
-            ):
-                if relationships_are_equal(s, sample):
-                    return True
-
-        for s in self.eval_sets_rejected_counterexamples[self.eval_set_key]:
-            if (
-                s["img_counterexample"] == sample["img_counterexample"]
-                or s["img_counterexample"] == sample["img_example"]
+                s["rejected_image"] == sample["img_example"]
+                or s["rejected_image"] == sample["img_counterexample"]
             ):
                 if relationships_are_equal(s, sample):
                     return True
@@ -301,12 +287,16 @@ class EvalSetFilter(QWidget):
         self.plot_sample(self.sample)
 
     def reject_example(self):
-        self.eval_sets_rejected_examples[self.eval_set_key].append(self.sample)
+        rejected_example = self.sample
+        rejected_example["rejected_image"] = rejected_example["img_example"]
+        self.eval_sets_rejected_examples[self.eval_set_key].append(rejected_example)
         self.sample = self.get_next_sample()
         self.plot_sample(self.sample)
 
     def reject_counterexample(self):
-        self.eval_sets_rejected_counterexamples[self.eval_set_key].append(self.sample)
+        rejected_example = self.sample
+        rejected_example["rejected_image"] = rejected_example["img_counterexample"]
+        self.eval_sets_rejected_examples[self.eval_set_key].append(rejected_example)
         self.sample = self.get_next_sample()
         self.plot_sample(self.sample)
 
