@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
             img_example_cropped = crop_image_to_bounding_box_size(
                 img_example_path,
-                sample["relationship_target"].bounding_box,
+                sample["relationship_target"]["bounding_box"],
                 return_numpy_array=False,
             )
             path_example_cropped = get_path_of_cropped_image(
@@ -48,7 +48,7 @@ if __name__ == "__main__":
             img_example_cropped.save(path_example_cropped)
             img_counterexample_cropped = crop_image_to_bounding_box_size(
                 img_counterexample_path,
-                sample["counterexample_relationship_target"].bounding_box,
+                sample["counterexample_relationship_target"]["bounding_box"],
                 return_numpy_array=False,
             )
             path_counterexample_cropped = get_path_of_cropped_image(

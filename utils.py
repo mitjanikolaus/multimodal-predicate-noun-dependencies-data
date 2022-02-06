@@ -551,7 +551,7 @@ IMGS_CROPPED_BASE_PATH = os.path.expanduser(
 
 def get_file_name_of_cropped_image(img_path, relationship):
     return (
-        os.path.basename(img_path).split(".jpg")[0] + "_rel_" + relationship.id + ".jpg"
+        os.path.basename(img_path).split(".jpg")[0] + "_rel_" + relationship["id"] + ".jpg"
     )
 
 
