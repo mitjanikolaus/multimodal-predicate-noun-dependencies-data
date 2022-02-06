@@ -2,7 +2,6 @@ import argparse
 import os
 import pickle
 
-import fiftyone
 from PyQt5 import QtGui, QtCore
 import sys
 
@@ -19,6 +18,7 @@ from PyQt5.QtWidgets import (
 
 from utils import SYNONYMS, SUBJECT, OBJECT, get_target_and_distractor_sentence, BOUNDING_BOX, REL, get_local_image_path
 
+EXCLUDED_OBJECTS = ["Smile", "Talk", "Table", "Coffee table", "Desk", "Chair", "Bench", "Car", "High heels", "Man", "Woman", "Girl", "Boy"]
 
 class EvalSetFilter(QWidget):
     def __init__(self, args):
@@ -29,9 +29,24 @@ class EvalSetFilter(QWidget):
         self.eval_sets = pickle.load(open(self.input_file, "rb"))
         print("Done.")
 
-        for key, values in self.eval_sets.items():
-            if len(values) > 0:
-                print(f"{key}: {len(values)})")
+        total = 0
+        for key, samples in self.eval_sets.items():
+            if len(samples) > 0:
+                samples = [sample for sample in samples if
+                           sample["relationship_target"][OBJECT] not in EXCLUDED_OBJECTS]
+
+                if "subject" in self.input_file:
+                    # Sort values by object
+                    self.eval_sets[key] = sorted(samples, key=lambda x: x["relationship_target"][OBJECT])
+
+                elif "object" in self.input_file:
+                    # Sort values by subject
+                    self.eval_sets[key] = sorted(samples, key=lambda x: x["relationship_target"][SUBJECT])
+
+                print(f"{key}: {len(samples)})")
+                total += len(samples)
+
+        print("Total: ", total)
 
         if args.continue_from:
             print("Continuing from: ", args.continue_from)
