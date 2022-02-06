@@ -26,7 +26,11 @@ def generate_sentence_for_eval_set(args):
 
     eval_set = pickle.load(open(args.filtered_eval_set, "rb"))
 
+    # Remove empty sets
+    eval_set = {set: samples for set, samples in eval_set.items() if len(samples) > 0}
+
     predicates = {}
+    distinct_sentences = set()
 
     for tuple, samples in eval_set.items():
         # print(tuple)
@@ -106,6 +110,13 @@ def generate_sentence_for_eval_set(args):
             )
             sample["sentence_distractor"] = sentence_distractor
 
+            distinct_sentences.add(sentence_target)
+            distinct_sentences.add(sentence_distractor)
+
+    print("Generated unique sentences:")
+    for sentence in distinct_sentences:
+        print(sentence)
+
     pickle.dump(eval_set, open(args.filtered_eval_set, "wb"))
 
 
@@ -130,7 +141,26 @@ def get_predicates(captions, nlp, subject, predicate, obj, original_object):
             return [predicate + "s"]
         elif original_object == "Chair":
             return [predicate]
+
+        # In these cases we just need to change the verbs to present progressive:
+        elif original_object == "Dog":
+            return ["holding"]
+        elif original_object == "Wine glass" or original_object == "Mobile phone":
+            return ["holding"]
+        elif original_object == "Bicycle helmet":
+            return ["wearing"]
+        elif original_object == "Balloon":
+            return ["holding"]
+        elif original_object == "Wheelchair":
+            return ["riding"]
+        elif original_object == "Beer":
+            return ["holding"]
+        elif original_object == "Crown":
+            return ["wearing"]
+        elif original_object == "Cake":
+            return ["holding"]
         else:
+            # For ambiguous predicates: find most frequent usage in training data
             connections = []
             for caption in captions:
                 tokens = caption.lower().split(" ")
@@ -160,7 +190,8 @@ def get_predicates(captions, nlp, subject, predicate, obj, original_object):
 
 def generate_sentence_from_triplet(subj, pred, obj, original_object):
     if original_object not in OBJECTS_VERBS + OBJECTS_PLURAL + OBJECTS_TEXTURES:
-        obj = "a " + obj
+        if not (obj == "guitar" or obj == "cello"):
+            obj = "a " + obj
 
     if original_object in OBJECTS_TEXTURES:
         sentence = f"a {obj} {subj} {pred}".strip()
@@ -170,7 +201,6 @@ def generate_sentence_from_triplet(subj, pred, obj, original_object):
     # Lower case
     sentence = sentence.lower()
 
-    print("Generated: ", sentence)
     return sentence
 
 
@@ -188,9 +218,10 @@ def transform_object(obj):
     else:
         if obj == "Sun hat":
             obj = "hat"
-        if obj == "High heels":
-            # TODO
-            obj = "shoes"
+        elif obj == "Bicycle":
+            obj = "bike"
+        elif obj == "Bicycle helmet":
+            obj = "helmet"
 
         if "(made of)" in obj:
             obj = obj.replace("(made of)", "")
