@@ -68,6 +68,6 @@ if __name__ == "__main__":
     out_file_cropped_name = (
             "img_cropped_paths_" + os.path.basename(arg_values.eval_set.split(".p")[0]) + ".txt"
     )
-    with open(out_file_cropped_name, "w") as text_file:
+    with open(os.path.join("preprocessing", out_file_cropped_name), "w") as text_file:
         for path in {p for p in img_cropped_paths}:
             text_file.write(path + "\n")
