@@ -27,5 +27,6 @@ if __name__ == "__main__":
             data = data[~data.index.isin(joined.index)]
             joined = joined.append(data)
 
+    print("Number of samples in joined file: ", len(joined))
     print("Writing file to ", args.out)
     joined.to_csv(args.out, header=None, index_label="img_id", sep='\t')
