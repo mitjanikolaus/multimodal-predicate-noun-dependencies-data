@@ -322,11 +322,7 @@ class EvalSetFilter(QWidget):
         )
         file_name = os.path.basename(self.input_file).replace(".p", f"_rejected_examples_eval_set_{self.eval_set_index + 1}_sample_{self.sample_index + 1}.p")
         pickle.dump(
-            self.eval_sets_filtered, open(os.path.join("filtered_eval_sets", file_name), "wb",)
-        )
-        file_name = os.path.basename(self.input_file).replace(".p", f"_rejected_counterexamples_eval_set_{self.eval_set_index + 1}_sample_{self.sample_index + 1}.p")
-        pickle.dump(
-            self.eval_sets_filtered, open(os.path.join("filtered_eval_sets", file_name), "wb",),
+            self.eval_sets_rejected_examples, open(os.path.join("filtered_eval_sets", file_name), "wb",)
         )
         summary = ""
         for key, values in self.eval_sets_filtered.items():
