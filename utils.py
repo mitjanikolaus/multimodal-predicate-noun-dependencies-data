@@ -293,30 +293,6 @@ for synonyms in SYNONYMS_LIST:
 
 VALID_NAMES = {"label": RELATIONSHIPS, "Label2": OBJECT_NAMES}
 
-REFERENCE_TIME = time()
-TIME_LOG_THRESHOLD = 0.1
-
-
-def log_time(message, reference_time=None):
-    if reference_time:
-        ref = reference_time
-    else:
-        global REFERENCE_TIME
-        ref = REFERENCE_TIME
-
-    current_time = time()
-    timedelta = current_time - ref
-
-    if timedelta > TIME_LOG_THRESHOLD:
-        line = "=" * 40
-        print(line)
-        print(f"{message} | Time passed: {timedelta:.1f}s")
-        print(line)
-        print()
-
-    if not reference_time:
-        REFERENCE_TIME = current_time
-
 
 # Threshold for overlap of 2 bounding boxes
 THRESHOLD_SAME_BOUNDING_BOX = 0.02
@@ -491,31 +467,6 @@ def show_image_pair(
         )
 
     plt.show()
-
-#
-# def show_sample(
-#     sample,
-#     target_sentence=None,
-#     distractor_sentence=None,
-#     result_example=None,
-#     result_counterexample=None,
-# ):
-#     img_1_path = get_local_image_path(sample["img_example"])
-#     img_2_path = get_local_image_path(sample["img_counterexample"])
-#
-#     show_image_pair(
-#         img_1_path,
-#         img_2_path,
-#         [sample["relationship_target"], sample["relationship_visual_distractor"]],
-#         [
-#             sample["counterexample_relationship_target"],
-#             sample["counterexample_relationship_visual_distractor"],
-#         ],
-#         target_sentence,
-#         distractor_sentence,
-#         result_example,
-#         result_counterexample,
-#     )
 
 
 def crop_image_to_bounding_box_size(image_path, bb, return_numpy_array=True):
