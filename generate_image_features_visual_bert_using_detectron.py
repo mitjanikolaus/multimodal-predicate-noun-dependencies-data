@@ -9,7 +9,8 @@ import numpy as np
 
 from tqdm import tqdm
 
-from utils import get_local_image_path, get_path_of_cropped_image
+from filter_eval_set import get_local_image_path
+from utils import get_path_of_cropped_image
 from detectron2.modeling import build_model
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputs
 from detectron2.checkpoint import DetectionCheckpointer

@@ -8,7 +8,8 @@ from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
-from utils import get_local_image_path, get_path_of_cropped_image
+from filter_eval_set import get_local_image_path
+from utils import get_path_of_cropped_image
 
 from PIL import Image
 

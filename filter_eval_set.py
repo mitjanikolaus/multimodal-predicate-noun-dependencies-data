@@ -5,6 +5,8 @@ import pickle
 from PyQt5 import QtGui, QtCore
 import sys
 
+import fiftyone
+
 from PyQt5.QtGui import QFont, QKeySequence
 from PyQt5.QtWidgets import (
     QApplication,
@@ -16,7 +18,7 @@ from PyQt5.QtWidgets import (
     QShortcut,
 )
 
-from utils import SYNONYMS, SUBJECT, OBJECT, get_target_and_distractor_sentence, BOUNDING_BOX, REL, get_local_image_path
+from utils import SYNONYMS, SUBJECT, OBJECT, get_target_and_distractor_sentence, BOUNDING_BOX, REL
 
 EXCLUDED_OBJECTS = ["Smile", "Talk", "Table", "Coffee table", "Desk", "Chair", "Bench", "Car", "High heels", "Man", "Woman", "Girl", "Boy"]
 
@@ -347,6 +349,9 @@ def parse_args():
     args = argparser.parse_args()
 
     return args
+
+def get_local_image_path(img_path):
+    return os.path.join(*[fiftyone.config.dataset_zoo_dir, "open-images-v6", img_path.split("open-images-v6/")[1]])
 
 
 if __name__ == "__main__":

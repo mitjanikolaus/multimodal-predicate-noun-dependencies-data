@@ -1,7 +1,6 @@
 import itertools
 import os
 
-import fiftyone
 import pandas as pd
 import numpy as np
 
@@ -319,10 +318,6 @@ def log_time(message, reference_time=None):
         REFERENCE_TIME = current_time
 
 
-def get_local_image_path(img_path):
-    return os.path.join(*[fiftyone.config.dataset_zoo_dir, "open-images-v6", img_path.split("open-images-v6/")[1]])
-
-
 # Threshold for overlap of 2 bounding boxes
 THRESHOLD_SAME_BOUNDING_BOX = 0.02
 
@@ -497,30 +492,30 @@ def show_image_pair(
 
     plt.show()
 
-
-def show_sample(
-    sample,
-    target_sentence=None,
-    distractor_sentence=None,
-    result_example=None,
-    result_counterexample=None,
-):
-    img_1_path = get_local_image_path(sample["img_example"])
-    img_2_path = get_local_image_path(sample["img_counterexample"])
-
-    show_image_pair(
-        img_1_path,
-        img_2_path,
-        [sample["relationship_target"], sample["relationship_visual_distractor"]],
-        [
-            sample["counterexample_relationship_target"],
-            sample["counterexample_relationship_visual_distractor"],
-        ],
-        target_sentence,
-        distractor_sentence,
-        result_example,
-        result_counterexample,
-    )
+#
+# def show_sample(
+#     sample,
+#     target_sentence=None,
+#     distractor_sentence=None,
+#     result_example=None,
+#     result_counterexample=None,
+# ):
+#     img_1_path = get_local_image_path(sample["img_example"])
+#     img_2_path = get_local_image_path(sample["img_counterexample"])
+#
+#     show_image_pair(
+#         img_1_path,
+#         img_2_path,
+#         [sample["relationship_target"], sample["relationship_visual_distractor"]],
+#         [
+#             sample["counterexample_relationship_target"],
+#             sample["counterexample_relationship_visual_distractor"],
+#         ],
+#         target_sentence,
+#         distractor_sentence,
+#         result_example,
+#         result_counterexample,
+#     )
 
 
 def crop_image_to_bounding_box_size(image_path, bb, return_numpy_array=True):
@@ -543,7 +538,9 @@ def crop_image_to_bounding_box_size(image_path, bb, return_numpy_array=True):
     else:
         return img_cropped
 
-
+IMGS_BASE_PATH = os.path.expanduser(
+    "~/data/multimodal_evaluation/images/"
+)
 IMGS_CROPPED_BASE_PATH = os.path.expanduser(
     "~/data/multimodal_evaluation/images_cropped/"
 )
@@ -552,6 +549,12 @@ IMGS_CROPPED_BASE_PATH = os.path.expanduser(
 def get_file_name_of_cropped_image(img_path, relationship):
     return (
         os.path.basename(img_path).split(".jpg")[0] + "_rel_" + relationship["id"] + ".jpg"
+    )
+
+
+def get_path_of_image(img_path):
+    return os.path.join(
+        IMGS_BASE_PATH, os.path.basename(img_path)
     )
 
 
