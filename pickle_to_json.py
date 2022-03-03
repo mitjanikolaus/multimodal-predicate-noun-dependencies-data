@@ -4,7 +4,13 @@ import pickle
 
 
 def make_rel_serializable(relationship):
-    relationship['bounding_box'] = list(relationship['bounding_box'])
+    relationship = {
+        "id": relationship["id"],
+        "Label1": relationship["Label1"],
+        "label": relationship["label"],
+        "Label2": relationship["Label2"],
+        "bounding_box": list(relationship["bounding_box"]),
+    }
     return relationship
 
 
