@@ -22,6 +22,7 @@ from utils import SYNONYMS, SUBJECT, OBJECT, get_target_and_distractor_sentence,
 
 EXCLUDED_OBJECTS = ["Smile", "Talk", "Table", "Coffee table", "Desk", "Chair", "Bench", "Car", "High heels", "Man", "Woman", "Girl", "Boy"]
 
+
 class EvalSetFilter(QWidget):
     def __init__(self, args):
         super().__init__()
@@ -153,11 +154,11 @@ class EvalSetFilter(QWidget):
 
         self.setWindowTitle("Filter eval set")
 
-        self.plot_sample(self.sample)
+        self.plot_sample()
 
         self.show()
 
-    def plot_sample(self, sample):
+    def plot_sample(self):
         title_text = f"{self.eval_set_key} (sample {self.sample_index+1}/{len(self.eval_set)}) (eval set {self.eval_set_index+1}/{len(self.eval_sets)})"
         self.text_title.setText(title_text)
 
@@ -280,7 +281,7 @@ class EvalSetFilter(QWidget):
     def goto_next_eval_set_and_load_sample(self):
         self.goto_next_eval_set()
         self.sample = self.eval_set[self.sample_index]
-        self.plot_sample(self.sample)
+        self.plot_sample()
 
     def goto_next_eval_set(self):
         self.sample_index = 0
@@ -301,21 +302,21 @@ class EvalSetFilter(QWidget):
     def accept(self):
         self.eval_sets_filtered[self.eval_set_key].append(self.sample)
         self.sample = self.get_next_sample()
-        self.plot_sample(self.sample)
+        self.plot_sample()
 
     def reject_example(self):
         rejected_example = self.sample
         rejected_example["rejected_image"] = rejected_example["img_example"]
         self.eval_sets_rejected_examples[self.eval_set_key].append(rejected_example)
         self.sample = self.get_next_sample()
-        self.plot_sample(self.sample)
+        self.plot_sample()
 
     def reject_counterexample(self):
         rejected_example = self.sample
         rejected_example["rejected_image"] = rejected_example["img_counterexample"]
         self.eval_sets_rejected_examples[self.eval_set_key].append(rejected_example)
         self.sample = self.get_next_sample()
-        self.plot_sample(self.sample)
+        self.plot_sample()
 
     def save(self):
         file_name = os.path.basename(self.input_file).replace(".p", f"_filtered_eval_set_{self.eval_set_index + 1}_sample_{self.sample_index + 1}.p")
@@ -349,6 +350,7 @@ def parse_args():
     args = argparser.parse_args()
 
     return args
+
 
 def get_local_image_path(img_path):
     return os.path.join(*[fiftyone.config.dataset_zoo_dir, "open-images-v6", img_path.split("open-images-v6/")[1]])
