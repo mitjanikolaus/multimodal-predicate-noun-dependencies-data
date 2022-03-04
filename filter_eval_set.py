@@ -174,12 +174,12 @@ class EvalSetFilter(QWidget):
 
         self.text_example_target.setText("Target: " + text_target)
         self.text_example_distractor.setText("Distractor: " + text_distractor)
-        img_path_example = get_local_image_path(self.sample["img_example"])
+        img_path_example = get_local_fiftyone_image_path(self.sample["img_example"])
         self.text_example_filepath.setText(img_path_example)
 
         self.text_counterexample_target.setText("Target: " + text_distractor)
         self.text_counterexample_distractor.setText("Distractor: " + text_target)
-        img_path_counterexample = get_local_image_path(self.sample["img_counterexample"])
+        img_path_counterexample = get_local_fiftyone_image_path(self.sample["img_counterexample"])
         self.text_counterexample_filepath.setText(img_path_counterexample)
 
         for img_path in [img_path_example, img_path_counterexample]:
@@ -352,7 +352,7 @@ def parse_args():
     return args
 
 
-def get_local_image_path(img_path):
+def get_local_fiftyone_image_path(img_path):
     return os.path.join(*[fiftyone.config.dataset_zoo_dir, "open-images-v6", img_path.split("open-images-v6/")[1]])
 
 
