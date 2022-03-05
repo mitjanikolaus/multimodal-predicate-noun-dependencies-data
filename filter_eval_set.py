@@ -185,6 +185,8 @@ class EvalSetFilter(QWidget):
         for img_path in [img_path_example, img_path_counterexample]:
             pixmap = QtGui.QPixmap(img_path)
             pixmap = pixmap.scaledToWidth(500)
+            if pixmap.height() > 600:
+                pixmap = pixmap.scaledToHeight(600)
 
             # create painter instance with pixmap
             self.painterInstance = QtGui.QPainter(pixmap)
