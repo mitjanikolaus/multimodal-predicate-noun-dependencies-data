@@ -1,32 +1,48 @@
 import argparse
-import pickle
-
+import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from utils import convert_eval_sets_to_one_sample_per_row, SUBJECT, OBJECT
+from utils import multiply_df_for_per_word_analyses, OBJECTS_VERBS
 
 
 def eval_set_stats(args):
-    all_eval_sets = []
-    for input_file in args.input_files:
-        print("Loading: ", input_file)
-        eval_set = pickle.load(open(input_file, "rb"))
-        eval_set = convert_eval_sets_to_one_sample_per_row(eval_set)
+    print("Loading: ", args.input_file)
+    eval_set = pd.read_json(args.input_file)
+    eval_set_per_word = multiply_df_for_per_word_analyses(eval_set)
 
-        all_eval_sets.append(eval_set)
-
-    eval_sets = pd.concat(all_eval_sets, ignore_index=True)
-
-    eval_sets.groupby("target_word").size().plot.bar()
+    g = eval_set_per_word.groupby("word").size().plot.bar()
     plt.xticks(rotation=75)
     plt.subplots_adjust(bottom=0.3)
+    g.set_yscale("log")
     plt.ylabel("# Samples")
+    plt.xlabel("")
     plt.tight_layout()
-    plt.savefig("results_figures/num_samples_target_word.png")
+    plt.savefig("results_figures/num_samples_per_word.png")
+
+    data_nouns = eval_set_per_word[~eval_set_per_word.word.isin(OBJECTS_VERBS)]
+    g = data_nouns.groupby("word").size().plot.bar()
+    plt.xticks(rotation=75)
+    plt.subplots_adjust(bottom=0.3)
+    g.set_yscale("log")
+    plt.ylabel("# Samples")
+    plt.xlabel("")
+    plt.tight_layout()
+    plt.savefig("results_figures/num_samples_per_word_nouns.png")
+
+    data_verbs = eval_set_per_word[eval_set_per_word.word.isin(OBJECTS_VERBS)]
+    g = data_verbs.groupby("word").size().plot.bar()
+    plt.xticks(rotation=75)
+    plt.subplots_adjust(bottom=0.3)
+    g.set_yscale("log")
+    plt.ylabel("# Samples")
+    plt.xlabel("")
+    plt.tight_layout()
+    plt.savefig("results_figures/num_samples_per_word_verbs.png")
 
     plt.figure(figsize=(20, 10))
-    eval_sets.groupby(["target_word", "distractor_word"]).size().plot.bar()
+    g = eval_set.groupby(["word_target", "word_distractor"]).size().plot.bar()
+    g.set_yscale("log")
     plt.xticks(rotation=75)
     plt.subplots_adjust(bottom=0.3)
     plt.ylabel("# Samples")
@@ -34,12 +50,10 @@ def eval_set_stats(args):
     plt.savefig("results_figures/num_samples_target_distractor.png")
 
     plt.figure(figsize=(20, 10))
-    eval_sets["subject"] = [r[SUBJECT] for r in eval_sets["relationship_target"]]
-    eval_sets["object"] = [r[OBJECT] for r in eval_sets["relationship_target"]]
-    eval_sets["subj_obj"] = [(t, d) for t, d in zip(eval_sets["subject"], eval_sets["object"])]
-    eval_sets.groupby("subj_obj").size().plot.bar()
-    plt.xticks(rotation=75)
-    plt.subplots_adjust(bottom=0.3)
+    g = sns.countplot(data=eval_set, x="subject", hue="object")
+    g.set_yscale("log")
+    # plt.xticks(rotation=75)
+    # plt.subplots_adjust(bottom=0.3)
     plt.ylabel("# Samples")
     plt.tight_layout()
     plt.savefig("results_figures/num_samples_subject_object.png")
@@ -49,7 +63,7 @@ def eval_set_stats(args):
 
 def parse_args():
     argparser = argparse.ArgumentParser()
-    argparser.add_argument(type=str, dest="input_files", nargs="+")
+    argparser.add_argument("--input-file", type=str, required=True)
 
     args = argparser.parse_args()
 

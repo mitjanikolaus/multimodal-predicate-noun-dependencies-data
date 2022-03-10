@@ -2,6 +2,8 @@ import json
 import os
 import pickle
 
+from utils import SYNONYMS, SUBJECT, REL, OBJECT
+
 
 def make_rel_serializable(relationship):
     if isinstance(relationship, dict):
@@ -40,6 +42,9 @@ if __name__ == "__main__":
                         "sentence_distractor": sample["sentence_distractor"],
                         "relationship_target": make_rel_serializable(sample["relationship_target"]),
                         "relationship_distractor": make_rel_serializable(sample["relationship_visual_distractor"]),
+                        "subject": SYNONYMS[sample["relationship_target"][SUBJECT]][0],
+                        "predicate": SYNONYMS[sample["relationship_target"][REL]][0],
+                        "object": SYNONYMS[sample["relationship_target"][OBJECT]][0],
                         "word_target": key[0],
                         "word_distractor": key[1],
                         "pos": pos,
@@ -54,6 +59,9 @@ if __name__ == "__main__":
                         "sentence_distractor": sample["sentence_target"],
                         "relationship_target": make_rel_serializable(sample["counterexample_relationship_target"]),
                         "relationship_distractor": make_rel_serializable(sample["counterexample_relationship_visual_distractor"]),
+                        "subject": SYNONYMS[sample["counterexample_relationship_target"][SUBJECT]][0],
+                        "predicate": SYNONYMS[sample["counterexample_relationship_target"][REL]][0],
+                        "object": SYNONYMS[sample["counterexample_relationship_target"][OBJECT]][0],
                         "word_target": key[1],
                         "word_distractor": key[0],
                         "pos": pos,
