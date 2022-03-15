@@ -6,6 +6,13 @@ Download conceptual captions training data from
 https://ai.google.com/research/ConceptualCaptions/download
 and save to `data/conceptual_captions/`.
 
+## Annotate
+
+```
+python annotate.py --input-file filtered_eval_sets/eval_set_shuffled.json --start-idx <start_idx> --end-idx <end_idx> --images-path <path_to_images>
+```
+(maximum end_idx: 2585)
+
 ## Acknowledgements
 
 Image features for Visual BERT using detectron2 (for 1024 dimensional features): https://colab.research.google.com/drive/1bLGxKdldwqnMVA5x4neY7-l_8fKGWQYI

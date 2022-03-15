@@ -21,27 +21,25 @@ class AnnotationWidget(QWidget):
     def __init__(self, args):
         super().__init__()
         self.images_path = args.images_path
-        self.num_samples = args.num_samples
-        self.output_file = args.output_file
-        if os.path.isfile(self.output_file):
-            QMessageBox.warning(
-                self,
-                "Warning",
-                f"Output file {self.output_file} exists already! Either move this file or specify another "
-                f"location using the --output-file argument.",
-            )
-            self.close()
-            sys.exit()
+        self.start_idx = args.start_idx
+        self.end_idx = args.end_idx
 
         self.results = []
 
         self.input_file = args.input_file
         print("Loading: ", self.input_file)
         self.samples = json.load(open(self.input_file, "r"))
-        print("Done.")
 
-        self.indices = random.sample(range(len(self.samples)), args.num_samples)
-        self.target_positions = random.choices([0, 1], k=args.num_samples)
+        if args.end_idx >= len(self.samples):
+            QMessageBox.warning(
+                self,
+                "Warning",
+                f"End index {args.end_idx} to high. Maximum: {len(self.samples)-1}"
+            )
+            self.close()
+            sys.exit()
+        self.indices = list(range(args.start_idx, args.end_idx))
+        self.target_positions = random.choices([0, 1], k=len(self.indices))
 
         grid = QGridLayout()
         self.setLayout(grid)
@@ -79,7 +77,7 @@ class AnnotationWidget(QWidget):
         self.show()
 
     def plot_sample(self):
-        title_text = f"sample {self.sample_index+1}/{self.num_samples}"
+        title_text = f"sample {self.sample_index+1}/{len(self.indices)}"
         self.text_title.setText(title_text)
 
         text_target, text_distractor = self.sample["sentence_target"], self.sample["sentence_distractor"]
@@ -101,13 +99,12 @@ class AnnotationWidget(QWidget):
     def next_sample(self):
         self.sample_index += 1
 
-        self.save()
-        if self.sample_index >= self.num_samples:
-            self.save()
+        output_file = self.save()
+        if self.sample_index >= len(self.indices):
             QMessageBox.information(
                 self,
                 "End",
-                f"End of annotation. The results have been saved to {self.output_file}."
+                f"End of annotation. The results have been saved to {output_file}."
                 "\nThanks for your help!",
             )
             self.close()
@@ -130,7 +127,13 @@ class AnnotationWidget(QWidget):
         self.next_sample()
 
     def save(self):
-        json.dump(self.results, open(self.output_file, "w"))
+        output_file = f"samples_annotated_start_{self.start_idx}_end_{self.end_idx}_sample_{self.sample_index}.json"
+        json.dump(self.results, open(output_file, "w"))
+        # Remove previous file
+        if not self.sample_index == 0:
+            prev_output_file = f"samples_annotated_start_{self.start_idx}_end_{self.end_idx}_sample_{self.sample_index-1}.json"
+            os.remove(prev_output_file)
+        return output_file
 
 
 def parse_args():
@@ -139,10 +142,10 @@ def parse_args():
         "--input-file", type=str, required=True,
     )
     argparser.add_argument(
-        "--output-file", type=str, default="samples_annotated.json",
+        "--start-idx", type=int, required=True,
     )
     argparser.add_argument(
-        "--num-samples", type=int, default=100,
+        "--end-idx", type=int, required=True,
     )
     argparser.add_argument(
         "--images-path", type=str, default=os.path.expanduser("~/data/multimodal_evaluation/images/"),
