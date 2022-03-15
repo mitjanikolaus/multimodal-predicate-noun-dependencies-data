@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QWidget,
     QLabel,
 )
+import pandas as pd
 
 
 class AnnotationWidget(QWidget):
@@ -127,11 +128,12 @@ class AnnotationWidget(QWidget):
         self.next_sample()
 
     def save(self):
-        output_file = f"samples_annotated_start_{self.start_idx}_end_{self.end_idx}_sample_{self.sample_index}.json"
-        json.dump(self.results, open(output_file, "w"))
+        results_df = pd.DataFrame(self.results)
+        output_file = f"samples_annotated_start_{self.start_idx}_end_{self.end_idx}_sample_{self.sample_index}.csv"
+        results_df.to_csv(output_file, index=False)
         # Remove previous file
         if not self.sample_index == 0:
-            prev_output_file = f"samples_annotated_start_{self.start_idx}_end_{self.end_idx}_sample_{self.sample_index-1}.json"
+            prev_output_file = f"samples_annotated_start_{self.start_idx}_end_{self.end_idx}_sample_{self.sample_index-1}.csv"
             os.remove(prev_output_file)
         return output_file
 
