@@ -254,7 +254,7 @@ if __name__ == "__main__":
     image_features = {}
     image_features_cropped = {}
 
-    for sample in tqdm(eval_set[:100]):
+    for sample in tqdm(eval_set):
         img_example_path = get_path_of_image(sample["img_filename"])
 
         img_example = plt.imread(img_example_path)
