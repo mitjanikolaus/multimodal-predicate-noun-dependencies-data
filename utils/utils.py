@@ -243,7 +243,7 @@ RELATIONSHIPS_TUPLES = (
 )
 
 subjects_counter = pd.read_csv(
-    "data/subject_occurrences.csv",
+    "../data/subject_occurrences.csv",
     index_col=None,
     header=None,
     names=["subject", "count"],
@@ -251,12 +251,12 @@ subjects_counter = pd.read_csv(
 SUBJECT_NAMES = list(subjects_counter["subject"].values)
 
 relationships_counter = pd.read_csv(
-    "data/rel_occurrences.csv", index_col=None, header=None, names=["rel", "count"]
+    "../data/rel_occurrences.csv", index_col=None, header=None, names=["rel", "count"]
 )
 RELATIONSHIP_NAMES = list(relationships_counter["rel"].values)
 
 objects_counter = pd.read_csv(
-    "data/obj_occurrences.csv", index_col=None, header=None, names=["obj", "count"]
+    "../data/obj_occurrences.csv", index_col=None, header=None, names=["obj", "count"]
 )
 OBJECT_NAMES = list(objects_counter["obj"].values)
 

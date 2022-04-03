@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import pickle
 
@@ -9,8 +10,7 @@ import numpy as np
 
 from tqdm import tqdm
 
-from filter_eval_set import get_local_image_path
-from utils import get_path_of_cropped_image
+from utils import get_path_of_cropped_image, get_path_of_image
 from detectron2.modeling import build_model
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputs
 from detectron2.checkpoint import DetectionCheckpointer
@@ -22,13 +22,9 @@ from detectron2.layers import nms
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
 
-from PIL import Image
-
-
 MIN_BOXES = 10
 
-# TODO: 144 in original paper
-MAX_BOXES = 100
+MAX_BOXES = 144
 
 
 def get_args():
@@ -196,13 +192,12 @@ def get_visual_embeds(box_features, keep_boxes):
     return box_features[keep_boxes.copy()]
 
 
-def get_image_features(img_example, img_counterexample):
+def get_image_features(img_example):
     # Detectron expects BGR images
     img_example_bgr = cv2.cvtColor(img_example, cv2.COLOR_RGB2BGR)
-    img_counterexample_bgr = cv2.cvtColor(img_counterexample, cv2.COLOR_RGB2BGR)
 
     images, batched_inputs = prepare_image_inputs(
-        cfg, [img_example_bgr, img_counterexample_bgr]
+        cfg, [img_example_bgr]
     )
 
     features = get_features(model, images)
@@ -210,7 +205,7 @@ def get_image_features(img_example, img_counterexample):
     proposals = get_proposals(model, images, features)
 
     box_features, features_list = get_box_features(
-        model, features, proposals, cfg, batch_size=2
+        model, features, proposals, cfg, batch_size=1
     )
 
     pred_class_logits, pred_proposal_deltas = get_prediction_logits(
@@ -242,7 +237,7 @@ def get_image_features(img_example, img_counterexample):
         for box_feature, keep_box in zip(box_features, keep_boxes)
     ]
 
-    return visual_embeds[0].detach(), visual_embeds[1].detach()
+    return visual_embeds[0].detach()
 
 
 if __name__ == "__main__":
@@ -255,44 +250,32 @@ if __name__ == "__main__":
 
     model = get_model(cfg)
 
-    eval_sets = pickle.load(open(arg_values.eval_set, "rb"))
+    eval_set = json.load(open(arg_values.eval_set, "rb"))
     image_features = {}
     image_features_cropped = {}
 
-    for key, set in eval_sets.items():
-        print(key)
-        for sample in tqdm(set):
-            img_example_path = get_local_image_path(sample["img_example"])
-            img_counterexample_path = get_local_image_path(sample["img_counterexample"])
+    for sample in tqdm(eval_set[:100]):
+        img_example_path = get_path_of_image(sample["img_filename"])
 
-            img_example = plt.imread(img_example_path)
-            img_counterexample = plt.imread(img_counterexample_path)
-            (
-                image_features[img_example_path],
-                image_features[img_counterexample_path],
-            ) = get_image_features(img_example, img_counterexample)
+        img_example = plt.imread(img_example_path)
+        image_features[os.path.basename(img_example_path)] = get_image_features(img_example)
 
-            img_example_cropped_path = get_path_of_cropped_image(img_example_path, sample["relationship_target"])
-            img_example_cropped = plt.imread(img_example_cropped_path)
+        img_example_cropped_path = get_path_of_cropped_image(img_example_path, sample["relationship_target"])
+        img_example_cropped = plt.imread(img_example_cropped_path)
 
-            img_counterexample_cropped_path = get_path_of_cropped_image(img_counterexample_path, sample["counterexample_relationship_target"])
-            img_counterexample_cropped = plt.imread(img_example_cropped_path)
-            (
-                image_features_cropped[img_example_cropped_path],
-                image_features_cropped[img_counterexample_cropped_path],
-            ) = get_image_features(img_example_cropped, img_counterexample_cropped)
+        image_features_cropped[os.path.basename(img_example_cropped_path)] = get_image_features(img_example_cropped)
 
-    out_file_name = os.path.basename(arg_values.eval_set)
+    out_file_name = "img_features.p"
     out_file_path = os.path.expanduser(
-        os.path.join("~/data/multimodal_evaluation/image_features_1024", out_file_name)
+        os.path.join("~/data/multimodal_evaluation/image_features_visual_bert", out_file_name)
     )
     os.makedirs(os.path.dirname(out_file_path), exist_ok=True)
     pickle.dump(image_features, open(out_file_path, "wb"))
 
-    out_file_name = os.path.basename(arg_values.eval_set)
+    out_file_name = "img_cropped_features.p"
     out_file_path_cropped = os.path.expanduser(
         os.path.join(
-            "~/data/multimodal_evaluation/image_features_1024_cropped", out_file_name
+            "~/data/multimodal_evaluation/image_features_visual_bert", out_file_name
         )
     )
     os.makedirs(os.path.dirname(out_file_path_cropped), exist_ok=True)

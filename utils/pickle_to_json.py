@@ -70,6 +70,6 @@ if __name__ == "__main__":
                     id += 1
                     data_json.append(counterexample)
 
-    with open(f'filtered_eval_sets/eval_set.json', 'w') as file:
+    with open(f'../filtered_eval_sets/eval_set.json', 'w') as file:
         json.dump(data_json, file)
 

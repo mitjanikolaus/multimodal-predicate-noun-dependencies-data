@@ -6,7 +6,7 @@ import pickle
 from tqdm import tqdm
 
 from filter_eval_set import get_local_fiftyone_image_path
-from utils import (
+from utils.utils import (
     crop_image_to_bounding_box_size,
     get_path_of_cropped_image, IMGS_CROPPED_BASE_PATH, get_path_of_image,
 )
