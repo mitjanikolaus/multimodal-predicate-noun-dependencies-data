@@ -4,7 +4,7 @@ from collections import Counter
 import pandas as pd
 import spacy
 
-from utils import (
+from utils.utils import (
     SYNONYMS,
     SUBJECT,
     OBJECT,

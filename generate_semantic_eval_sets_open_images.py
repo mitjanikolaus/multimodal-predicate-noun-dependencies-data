@@ -8,7 +8,7 @@ import fiftyone.zoo as foz
 from PIL import Image as PIL_Image, ImageFilter, ImageStat
 from tqdm import tqdm
 
-from utils import (
+from utils.utils import (
     SUBJECT,
     REL,
     OBJECT,

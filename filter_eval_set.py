@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
     QShortcut,
 )
 
-from utils import SYNONYMS, SUBJECT, OBJECT, get_target_and_distractor_sentence, BOUNDING_BOX, REL
+from utils.utils import SYNONYMS, SUBJECT, OBJECT, get_target_and_distractor_sentence, BOUNDING_BOX, REL
 
 EXCLUDED_OBJECTS = ["Smile", "Talk", "Table", "Coffee table", "Desk", "Chair", "Bench", "Car", "High heels", "Man", "Woman", "Girl", "Boy"]
 
