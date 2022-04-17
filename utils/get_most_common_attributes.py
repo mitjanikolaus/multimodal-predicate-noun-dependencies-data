@@ -6,14 +6,14 @@ from tqdm import tqdm
 
 def get_most_common_attributes():
     """Get the most common attributes from the open images test set"""
-    relationship_names = pd.read_csv("../data/oidv6-class-descriptions.csv")
+    relationship_names = pd.read_csv("data/oidv6-class-descriptions.csv")
     attribute_names_new = pd.read_csv(
-        "../data/oidv6-attributes-description_new.csv",
+        "data/oidv6-attributes-description_new.csv",
         names=["LabelName", "DisplayName"],
         header=None,
     )
     attribute_names_overlap = pd.read_csv(
-        "../data/oidv6-attributes-description_overlap.csv",
+        "data/oidv6-attributes-description_overlap.csv",
         names=["LabelName", "DisplayName"],
         header=None,
     )
@@ -37,15 +37,15 @@ def get_most_common_attributes():
 
     subjects_counter = Counter(relationships["LabelName1"].values)
     print(subjects_counter.most_common())
-    pd.DataFrame(subjects_counter).to_csv("../data/subject_occurrences.csv", index=False, header=False)
+    pd.DataFrame(subjects_counter.most_common()).to_csv("data/subject_occurrences.csv", header=False, index=False)
 
     obj_counter = Counter(relationships["LabelName2"].values)
     print(obj_counter.most_common())
-    pd.DataFrame(obj_counter).to_csv("../data/obj_occurrences.csv", index=False, header=False)
+    pd.DataFrame(obj_counter.most_common()).to_csv("data/obj_occurrences.csv", header=False, index=False)
 
     rel_counter = Counter(relationships["RelationshipLabel"].values)
     print(rel_counter.most_common())
-    pd.DataFrame(rel_counter).to_csv("../data/rel_occurrences.csv", index=False, header=False)
+    pd.DataFrame(rel_counter.most_common()).to_csv("data/rel_occurrences.csv", header=False, index=False)
 
     attributes_persons = Counter(
         relationships[
