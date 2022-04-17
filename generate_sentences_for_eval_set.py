@@ -39,7 +39,7 @@ def generate_sentence_for_eval_set(args):
             subject = original_subject.lower()
 
             original_object = SYNONYMS[sample["relationship_target"][OBJECT]][0]
-            obj = transform_object(original_object)
+            obj = transform_label(original_object)
 
             predicate = SYNONYMS[sample["relationship_target"][REL]][0]
 
@@ -52,7 +52,7 @@ def generate_sentence_for_eval_set(args):
             distractor_original_obj = SYNONYMS[
                 sample["counterexample_relationship_target"][OBJECT]
             ][0]
-            distractor_obj = transform_object(distractor_original_obj)
+            distractor_obj = transform_label(distractor_original_obj)
 
             distractor_predicate = SYNONYMS[
                 sample["counterexample_relationship_target"][REL]
@@ -204,29 +204,34 @@ def generate_sentence_from_triplet(subj, pred, obj, original_object):
     return sentence
 
 
-def transform_object(obj):
-    if obj in OBJECTS_VERBS:
-        if obj.endswith("t"):
-            obj += "ting"
-        elif obj.endswith("e"):
-            obj = obj[:-1] + "ing"
-        elif obj.endswith("n"):
-            obj += "ning"
+def simplify_noun(noun):
+    if noun == "Sun hat":
+        noun = "hat"
+    elif noun == "Bicycle":
+        noun = "bike"
+    elif noun == "Bicycle helmet":
+        noun = "helmet"
+    return noun
+
+
+def transform_label(label):
+    if label in OBJECTS_VERBS:
+        if label.endswith("t"):
+            label += "ting"
+        elif label.endswith("e"):
+            label = label[:-1] + "ing"
+        elif label.endswith("n"):
+            label += "ning"
         else:
-            obj += "ing"
+            label += "ing"
 
     else:
-        if obj == "Sun hat":
-            obj = "hat"
-        elif obj == "Bicycle":
-            obj = "bike"
-        elif obj == "Bicycle helmet":
-            obj = "helmet"
+        label = simplify_noun(label)
 
-        if "(made of)" in obj:
-            obj = obj.replace("(made of)", "")
+        if "(made of)" in label:
+            label = label.replace("(made of)", "")
 
-    return obj.lower()
+    return label.lower()
 
 
 def parse_args():
