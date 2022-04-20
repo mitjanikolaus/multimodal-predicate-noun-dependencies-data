@@ -591,15 +591,19 @@ def sample_to_dict(example):
     }
 
 
-def multiply_df_for_per_word_analyses(results):
-    results_words_1 = results.copy()
+def transform_to_per_pair_eval_set(eval_set):
+    # Examples are on even indices
+    results_pair = eval_set[eval_set.index % 2 == 0].copy()
+    return results_pair
 
-    results_words_1["word"] = results_words_1["subject"]
-    results_words_2 = results.copy()
-    results_words_2["word"] = results_words_2["word_distractor"]
-    results_words_3 = results.copy()
-    results_words_3["word"] = results_words_3["object"]
 
-    results_words = pd.concat([results_words_1, results_words_2, results_words_3], ignore_index=True)
+def multiply_df_for_per_word_analyses(eval_set):
+    results_words_1 = eval_set.copy()
+
+    results_words_1["concept"] = results_words_1["word_target"]
+    results_words_2 = eval_set.copy()
+    results_words_2["concept"] = results_words_2["word_distractor"]
+
+    results_words = pd.concat([results_words_1, results_words_2], ignore_index=True)
 
     return results_words
