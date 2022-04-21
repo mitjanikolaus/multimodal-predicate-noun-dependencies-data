@@ -3,25 +3,25 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from utils import multiply_df_for_per_word_analyses, OBJECTS_VERBS, transform_to_per_pair_eval_set
+from utils import multiply_df_for_per_concept_analyses, transform_to_per_pair_eval_set
 
 NOUNS = ["Woman", "Man", "Girl", "Boy"]
 
-MIN_NUM_TEST_SAMPLES = 10
+MIN_NUM_TEST_SAMPLES = 5
 
 
 def eval_set_stats(args):
     print("Loading: ", args.input_file)
     eval_set = pd.read_json(args.input_file)
-    eval_set = transform_to_per_pair_eval_set(eval_set)
-    eval_set_per_word = multiply_df_for_per_word_analyses(eval_set)
+    eval_set_pairs = transform_to_per_pair_eval_set(eval_set)
+    eval_set_per_concept = multiply_df_for_per_concept_analyses(eval_set_pairs)
 
-    words_enough_samples = [k for k, v in eval_set_per_word.groupby("concept").size().to_dict().items() if v >= MIN_NUM_TEST_SAMPLES]
-    eval_set_per_word = eval_set_per_word[eval_set_per_word.concept.isin(words_enough_samples)]
+    words_enough_samples = [k for k, v in eval_set_per_concept.groupby("concept").size().to_dict().items() if v >= MIN_NUM_TEST_SAMPLES]
+    eval_set_per_concept = eval_set_per_concept[eval_set_per_concept.concept.isin(words_enough_samples)]
 
-    _, axes = plt.subplots(2, 1, figsize=(4, 4), sharex="none", gridspec_kw={'height_ratios': [1, 3]})
+    _, axes = plt.subplots(2, 1, figsize=(4, 5), sharex="none", gridspec_kw={'height_ratios': [1, 4]})
 
-    data_nouns = eval_set_per_word[eval_set_per_word.concept.isin(NOUNS)]
+    data_nouns = eval_set_per_concept[eval_set_per_concept.concept.isin(NOUNS)]
     g = data_nouns.groupby("concept").size().plot.barh(color="black", ax=axes[0])
     g.set_xscale("log")
     g.set_xticks([1, 10, 100, 1000])
@@ -32,7 +32,7 @@ def eval_set_stats(args):
     axes[0].xaxis.label.set_visible(False)
     axes[0].yaxis.label.set_visible(False)
 
-    data_predicates = eval_set_per_word[~eval_set_per_word.concept.isin(NOUNS)].copy()
+    data_predicates = eval_set_per_concept[~eval_set_per_concept.concept.isin(NOUNS)].copy()
 
     full_predicates = {}
     predicates = data_predicates.concept.unique()

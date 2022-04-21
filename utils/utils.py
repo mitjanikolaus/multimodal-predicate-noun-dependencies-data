@@ -597,7 +597,7 @@ def transform_to_per_pair_eval_set(eval_set):
     return results_pair
 
 
-def multiply_df_for_per_word_analyses(eval_set):
+def multiply_df_for_per_concept_analyses(eval_set):
     results_words_1 = eval_set.copy()
 
     results_words_1["concept"] = results_words_1["word_target"]
