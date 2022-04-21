@@ -27,12 +27,12 @@ def make_rel_serializable(relationship):
 
 if __name__ == "__main__":
     data_json = []
+    id = 0
     for split in ["train", "test"]:
         for pos in ["object", "subject"]:
             file = f'filtered_eval_sets/{pos}-{split}.p'
             print("Processing: ", file)
             data = pickle.load(open(file, "rb"))
-            id = 0
             for key, samples in data.items():
                 for sample in samples:
                     example = {
@@ -70,6 +70,6 @@ if __name__ == "__main__":
                     id += 1
                     data_json.append(counterexample)
 
-    with open(f'../filtered_eval_sets/eval_set.json', 'w') as file:
+    with open(f'filtered_eval_sets/eval_set.json', 'w') as file:
         json.dump(data_json, file)
 
