@@ -19,7 +19,7 @@ def eval_set_stats(args):
     words_enough_samples = [k for k, v in eval_set_per_concept.groupby("concept").size().to_dict().items() if v >= MIN_NUM_TEST_SAMPLES]
     eval_set_per_concept = eval_set_per_concept[eval_set_per_concept.concept.isin(words_enough_samples)]
 
-    _, axes = plt.subplots(2, 1, figsize=(4, 5), sharex="none", gridspec_kw={'height_ratios': [1, 4]})
+    _, axes = plt.subplots(2, 1, figsize=(4, 5), sharex="none", gridspec_kw={'height_ratios': [1, 5]})
 
     data_nouns = eval_set_per_concept[eval_set_per_concept.concept.isin(NOUNS)]
     g = data_nouns.groupby("concept").size().plot.barh(color="black", ax=axes[0])
@@ -37,7 +37,6 @@ def eval_set_stats(args):
     full_predicates = {}
     predicates = data_predicates.concept.unique()
     for predicate in predicates:
-        print(predicate)
         full_pred = eval_set[eval_set.object == predicate].iloc[0].sentence_target.split("is ")[1]
         full_predicates[predicate] = full_pred
     data_predicates.concept.replace(full_predicates, inplace=True)

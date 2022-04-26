@@ -598,12 +598,13 @@ def transform_to_per_pair_eval_set(eval_set):
 
 
 def multiply_df_for_per_concept_analyses(eval_set):
-    results_words_1 = eval_set.copy()
+    eval_set_1 = eval_set.copy()
+    eval_set_1["concept"] = eval_set_1["subject"]
+    eval_set_2 = eval_set.copy()
+    eval_set_2["concept"] = eval_set_2["object"]
+    eval_set_3 = eval_set.copy()
+    eval_set_3["concept"] = eval_set_3["word_distractor"]
 
-    results_words_1["concept"] = results_words_1["word_target"]
-    results_words_2 = eval_set.copy()
-    results_words_2["concept"] = results_words_2["word_distractor"]
+    eval_set_concepts = pd.concat([eval_set_1, eval_set_2, eval_set_3], ignore_index=True)
 
-    results_words = pd.concat([results_words_1, results_words_2], ignore_index=True)
-
-    return results_words
+    return eval_set_concepts
