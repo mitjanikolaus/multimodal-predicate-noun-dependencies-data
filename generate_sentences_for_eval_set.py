@@ -1,4 +1,5 @@
 import argparse
+import json
 import pickle
 from collections import Counter
 import pandas as pd
@@ -24,17 +25,14 @@ def generate_sentence_for_eval_set(args):
     )
     captions = data[0].values
 
-    eval_set = pickle.load(open(args.filtered_eval_set, "rb"))
-
-    # Remove empty sets
-    eval_set = {set: samples for set, samples in eval_set.items() if len(samples) > 0}
+    eval_set = json.load(open(args.eval_set, "rb"))
 
     predicates = {}
     distinct_sentences = set()
 
-    for tuple, samples in eval_set.items():
-        # print(tuple)
-        for sample in samples:
+    for id, sample in enumerate(eval_set):
+        # Start from examples, which are on even indices
+        if id % 2 == 0:
             original_subject = SYNONYMS[sample["relationship_target"][SUBJECT]][0]
             subject = original_subject.lower()
 
@@ -43,19 +41,21 @@ def generate_sentence_for_eval_set(args):
 
             predicate = SYNONYMS[sample["relationship_target"][REL]][0]
 
-            # Distractor
+            # Counterexample
+            id_counterexample = id+1
+            counterexample = eval_set[id_counterexample]
             distractor_original_subj = SYNONYMS[
-                sample["counterexample_relationship_target"][SUBJECT]
+                counterexample["relationship_target"][SUBJECT]
             ][0]
             distractor_subject = distractor_original_subj.lower()
 
             distractor_original_obj = SYNONYMS[
-                sample["counterexample_relationship_target"][OBJECT]
+                counterexample["relationship_target"][OBJECT]
             ][0]
             distractor_obj = transform_label(distractor_original_obj)
 
             distractor_predicate = SYNONYMS[
-                sample["counterexample_relationship_target"][REL]
+                counterexample["relationship_target"][REL]
             ][0]
 
             if (original_subject, original_object) not in predicates or (
@@ -101,6 +101,10 @@ def generate_sentence_for_eval_set(args):
                 original_object,
             )
             sample["sentence_target"] = sentence_target
+            counterexample["sentence_distractor"] = sentence_target
+            sentence_target_alt = generate_alternative_sentence(sentence_target)
+            sample["sentence_target_alt"] = sentence_target_alt
+            counterexample["sentence_distractor_alt"] = sentence_target_alt
 
             sentence_distractor = generate_sentence_from_triplet(
                 distractor_subject,
@@ -109,15 +113,22 @@ def generate_sentence_for_eval_set(args):
                 distractor_original_obj,
             )
             sample["sentence_distractor"] = sentence_distractor
+            counterexample["sentence_target"] = sentence_distractor
+            sentence_distractor_alt = generate_alternative_sentence(sentence_distractor)
+            sample["sentence_distractor_alt"] = sentence_distractor_alt
+            counterexample["sentence_target_alt"] = sentence_distractor_alt
 
             distinct_sentences.add(sentence_target)
             distinct_sentences.add(sentence_distractor)
+            distinct_sentences.add(sentence_target_alt)
+            distinct_sentences.add(sentence_distractor_alt)
 
     print("Generated unique sentences:")
     for sentence in distinct_sentences:
         print(sentence)
 
-    pickle.dump(eval_set, open(args.filtered_eval_set, "wb"))
+    with open(args.eval_set, 'w') as file:
+        json.dump(eval_set, file)
 
 
 def get_common_predicate(predicates_target, predicates_distractor):
@@ -204,6 +215,27 @@ def generate_sentence_from_triplet(subj, pred, obj, original_object):
     return sentence
 
 
+def generate_alternative_sentence(sentence):
+    sentence_alt = sentence
+    sentence_alt = "the" + sentence_alt[1:]
+    sentence_alt = sentence_alt.replace(" is ", " ")
+    sentence_alt = sentence_alt.replace("ting", "s")
+    sentence_alt = sentence_alt.replace("ning", "s")
+    sentence_alt = sentence_alt.replace("lding", "lds")
+    sentence_alt = sentence_alt.replace("iding", "ides")
+    sentence_alt = sentence_alt.replace("nding", "nds")
+    sentence_alt = sentence_alt.replace("ading", "ads")
+    sentence_alt = sentence_alt.replace("ling", "les")
+    sentence_alt = sentence_alt.replace("ging", "gs")
+    sentence_alt = sentence_alt.replace("king", "ks")
+    sentence_alt = sentence_alt.replace("aying", "ays")
+    sentence_alt = sentence_alt.replace("rying", "ries")
+    sentence_alt = sentence_alt.replace("ring", "rs")
+    sentence_alt = sentence_alt.replace("ping", "ps")
+
+    return sentence_alt
+
+
 def simplify_noun(noun):
     if noun == "Sun hat":
         noun = "hat"
@@ -237,7 +269,7 @@ def transform_label(label):
 def parse_args():
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
-        "--filtered-eval-set",
+        "--eval-set",
         type=str,
         required=True,
     )
