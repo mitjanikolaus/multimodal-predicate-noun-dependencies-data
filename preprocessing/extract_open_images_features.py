@@ -2,6 +2,8 @@
 # Script adapted from https://github.com/airsplay/lxmert
 
 # The root of bottom-up-attention repo. Do not need to change if using provided docker file.
+import glob
+
 BUTD_ROOT = '/opt/butd/'
 
 import os, sys
@@ -132,8 +134,7 @@ def parse_args():
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
-    parser.add_argument('--imgroot', type=str, default='/workspace/images/')
-    parser.add_argument('--img-paths', type=str, required=True)
+    parser.add_argument('--img-dir', type=str, required=True)
     parser.add_argument('--caffemodel', type=str, default='./resnet101_faster_rcnn_final_iter_320000.caffemodel')
 
     args = parser.parse_args()
@@ -144,9 +145,10 @@ if __name__ == '__main__':
     # Setup the configuration, normally do not need to touch these:
     args = parse_args()
 
-
     print('Called with args:')
     print(args)
+    print("Min boxes: ", MIN_BOXES)
+    print("Max boxes: ", MAX_BOXES)
 
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
@@ -155,22 +157,10 @@ if __name__ == '__main__':
     pprint.pprint(cfg)
     assert cfg.TEST.HAS_RPN
 
-    t = open(args.img_paths, "r")
-    paths = t.readlines()
-    t.close()
-
     docker_paths = []
-    for path in paths:
-        path = path.replace("\n", "")
-        # for normal images:
-        if "fiftyone/" in path:
-            path = os.path.join("/workspace/images/", path.split("fiftyone/open-images-v6/")[1])
-        # for cropped images:
-        elif "images_cropped/" in path:
-            path = os.path.join("/workspace/images/", path.split("images_cropped/")[1])
-        else:
-            raise RuntimeError("Unsupported Path: ", path)
-
+    for path in glob.glob(args.img_dir+"*.jpg"):
         docker_paths.append(path)
+
+    docker_paths = sorted(docker_paths)
 
     generate_tsv(args.prototxt, args.caffemodel, docker_paths, args.outfile)
