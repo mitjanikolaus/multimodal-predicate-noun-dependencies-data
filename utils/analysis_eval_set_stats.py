@@ -1,4 +1,5 @@
 import argparse
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -7,7 +8,7 @@ from utils import multiply_df_for_per_concept_analyses, transform_to_per_pair_ev
 
 NOUNS = ["Woman", "Man", "Girl", "Boy"]
 
-MIN_NUM_TEST_SAMPLES = 5
+MIN_NUM_TEST_SAMPLES = 0
 
 
 def eval_set_stats(args):
@@ -19,7 +20,7 @@ def eval_set_stats(args):
     words_enough_samples = [k for k, v in eval_set_per_concept.groupby("concept").size().to_dict().items() if v >= MIN_NUM_TEST_SAMPLES]
     eval_set_per_concept = eval_set_per_concept[eval_set_per_concept.concept.isin(words_enough_samples)]
 
-    _, axes = plt.subplots(2, 1, figsize=(4, 5), sharex="none", gridspec_kw={'height_ratios': [1, 5]})
+    _, axes = plt.subplots(2, 1, figsize=(4, 7), sharex="none", gridspec_kw={'height_ratios': [1, 8]})
 
     data_nouns = eval_set_per_concept[eval_set_per_concept.concept.isin(NOUNS)]
     g = data_nouns.groupby("concept").size().plot.barh(color="black", ax=axes[0])
@@ -50,8 +51,6 @@ def eval_set_stats(args):
     plt.ylabel("")
     plt.tight_layout()
     plt.savefig("results_figures/num_samples_per_concept.pdf", dpi=300)
-
-
 
     plt.figure(figsize=(20, 10))
     g = eval_set.groupby(["word_target", "word_distractor"]).size().plot.bar()
