@@ -70,14 +70,14 @@ if __name__ == "__main__":
 
         image_features_cropped[os.path.basename(img_example_cropped_path)] = get_image_features(img_example_cropped_path)
 
-    out_file_name = "img_features.p"
+    out_file_name = "img_features_2048.p"
     out_file_path = os.path.expanduser(
         os.path.join("~/data/multimodal_evaluation/image_features_visual_bert", out_file_name)
     )
     os.makedirs(os.path.dirname(out_file_path), exist_ok=True)
     pickle.dump(image_features, open(out_file_path, "wb"))
 
-    out_file_name = "img_cropped_features.p"
+    out_file_name = "img_cropped_features_2048.p"
     out_file_path_cropped = os.path.expanduser(
         os.path.join(
             "~/data/multimodal_evaluation/image_features_visual_bert", out_file_name
